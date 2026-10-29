@@ -36,6 +36,15 @@ const Core = (() => {
     custom:  { label: 'Custom table',    seated: true },
     bench:   { label: 'Lab bench',       seated: true },
     teacher: { label: "Teacher's desk",  w: 1.5, d: 0.75, sides: { t: 0, b: 0, l: 0, r: 0 } },
+    // storage and fittings: no seats, just so the plan matches the real room (typical sizes)
+    bookcase: { label: 'Bookcase',       w: 0.9, d: 0.35, sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
+    cupboard: { label: 'Cupboard',       w: 1.0, d: 0.5,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
+    filing:   { label: 'Filing cabinet', w: 0.5, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, short: 'Files' },
+    lockers:  { label: 'Lockers',        w: 1.2, d: 0.45, sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
+    trolley:  { label: 'Laptop trolley', w: 0.9, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, short: 'Laptops' },
+    sink:     { label: 'Sink',           w: 0.9, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
+    fume:     { label: 'Fume cupboard',  w: 1.2, d: 0.8,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, short: 'Fume' },
+    rug:      { label: 'Reading rug',    w: 2.0, d: 1.5,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, floor: true, short: 'Rug' },
     board:   { label: 'Board',  wall: true, lenM: 3.6 },
     door:    { label: 'Door',   wall: true, lenM: 0.9 },
     window:  { label: 'Window', wall: true, lenM: 2.0 },
@@ -43,6 +52,8 @@ const Core = (() => {
   const isWall = it => !!(TYPES[it.type] && TYPES[it.type].wall);
   const isSeated = it => !!(TYPES[it.type] && TYPES[it.type].seated);
   const isRound = it => !!(TYPES[it.type] && TYPES[it.type].round);
+  const isFixture = it => !!(TYPES[it.type] && TYPES[it.type].fixture);
+  const isFloor = it => !!(TYPES[it.type] && TYPES[it.type].floor);   // lies on the floor: furniture can stand on it
   const wallLenM = it => it.lenM || TYPES[it.type].lenM;
   const benchLenM = it => clamp(+it.lenM || 2.4, 0.6, 20);
 
@@ -171,7 +182,7 @@ const Core = (() => {
     const r = { x: g.x, y: g.y, w: g.w, h: g.h };
     if (!rectInside(r, room.boundary)) return 'outside';
     for (const o of room.items) {
-      if (o.id === item.id || isWall(o)) continue;
+      if (o.id === item.id || isWall(o) || isFloor(o) || isFloor(item)) continue;
       const og = itemGeom(o, room.scale);
       if (rectsOverlap(r, { x: og.x, y: og.y, w: og.w, h: og.h })) return 'overlap';
     }
@@ -537,7 +548,7 @@ const Core = (() => {
   }
 
   return {
-    TYPES, ADJ_M, CHAIR_M, isWall, isSeated, isRound, wallLenM, benchLenM, tableSizeM, tableDims, itemGeom, wallGeom, roomSeats, itemProblem, rectInside,
+    TYPES, ADJ_M, CHAIR_M, isWall, isSeated, isRound, isFixture, isFloor, wallLenM, benchLenM, tableSizeM, tableDims, itemGeom, wallGeom, roomSeats, itemProblem, rectInside,
     pointInPoly, projectToSeg, polyArea, selfIntersects, seatsConflict, solve, checkPlan, mulberry32, shuffle, boardOf, clamp,
   };
 })();

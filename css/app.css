@@ -114,6 +114,7 @@ kbd { font: 11px Figtree, sans-serif; border: 1px solid var(--line-2); border-bo
   border: 1px solid var(--line-2); border-radius: 10px; background: #fff; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px;
   font-size: 12px; font-weight: 500; touch-action: none; user-select: none; -webkit-user-select: none;
 }
+.pal-sub { grid-column: 1 / -1; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); margin-top: 8px; }
 .pal-item:hover { border-color: var(--accent); background: var(--accent-soft); }
 .pal-item svg { width: 44px; height: 30px; }
 .statusbar { padding: 6px 14px; font-size: 12px; color: var(--ink-2); border-top: 1px solid var(--line); background: #fff; display: flex; gap: 16px; flex-wrap: wrap; }
@@ -129,6 +130,13 @@ kbd { font: 11px Figtree, sans-serif; border: 1px solid var(--line-2); border-bo
 .b-table { fill: #EDE6DA; stroke: #B9AE9C; stroke-width: .06; }
 .b-teacher { fill: #DCE3EE; stroke: #8E9BB2; stroke-width: .06; }
 .b-bench { fill: #DDE7E3; stroke: #93ADA3; stroke-width: .06; }
+.b-fix { fill: #E4E0D6; stroke: #9C9584; stroke-width: .06; }
+.b-fix-bookcase { fill: #E9DCC8; stroke: #A8916F; }
+.b-fix-filing, .b-fix-lockers { fill: #DCE3EA; stroke: #8496A8; }
+.b-fix-trolley { fill: #E2DDEE; stroke: #8F86A8; }
+.b-fix-sink { fill: #E3ECEF; stroke: #8AA2AA; }
+.b-fix-fume { fill: #E7E3D9; stroke: #9A927E; }
+.b-fix-rug { fill: #F1E2D3; stroke: #C9A98A; stroke-dasharray: .2 .15; }
 .b-seat { fill: #fff; stroke: #8D93A0; stroke-width: .06; cursor: pointer; }
 .b-seat.off { fill: #E7E5E0; stroke: #B9B6AE; }
 .b-seatnum { font: 600 .32px Figtree, sans-serif; fill: #6B7180; text-anchor: middle; dominant-baseline: central; pointer-events: none; }

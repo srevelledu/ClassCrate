@@ -282,13 +282,22 @@ function buildPlanSVG(cls, room, opts) {
     const w = r.w * s, hh = r.h * s, rx = Math.min(12, Math.min(w, hh) * .28);
     return `<rect x="${f1(-w / 2)}" y="${f1(-hh / 2)}" width="${f1(w)}" height="${f1(hh)}" rx="${f1(rx)}" fill="${fill}" transform="translate(${f1(c.x)} ${f1(c.y)}) rotate(${f1(deg)})" ${extra}/>`;
   };
-  for (const it of visible.filter(i => i.type === 'teacher' || (i.type === 'bench' && !Core.itemGeom(i, room.scale).seats.length))) {
-    const g = Core.itemGeom(it, room.scale);
-    h += rectSvg(g.table, it.type === 'teacher' ? pal.teacher : '#EEF0EC', `stroke="${pal.ink2}" stroke-opacity=".18" filter="url(#${F}sh)"`);
+  // furniture without seats: the teacher's desk, empty benches, storage and fittings (rugs first, underneath)
+  const plain = visible.filter(i => i.type === 'teacher' || Core.isFixture(i) || (i.type === 'bench' && !Core.itemGeom(i, room.scale).seats.length));
+  for (const it of plain.sort((a, b) => Core.isFloor(b) - Core.isFloor(a))) {
+    const g = Core.itemGeom(it, room.scale), floor = Core.isFloor(it);
+    const fill = it.type === 'teacher' ? pal.teacher : floor ? '#F6EEE6' : Core.isFixture(it) ? '#F1EFEA' : '#EEF0EC';
+    h += rectSvg(g.table, fill, floor ? `stroke="${pal.ink2}" stroke-opacity=".25" stroke-dasharray="4 3"` : `stroke="${pal.ink2}" stroke-opacity=".18" filter="url(#${F}sh)"`);
     const c = T({ x: g.table.x + g.table.w / 2, y: g.table.y + g.table.h / 2 });
-    const lbl = it.type === 'teacher' ? "TEACHER'S DESK" : 'BENCH';
-    const fs = clamp(Math.min(g.table.w, g.table.h) * s * .2, 8, 11);
-    h += `<text x="${f1(c.x)}" y="${f1(c.y + fs * .35)}" font-size="${f1(fs)}" font-weight="600" letter-spacing="1.4" text-anchor="middle" fill="${pal.ink2}">${lbl}</text>`;
+    const TT = Core.TYPES[it.type];
+    const longSide = Math.max(g.table.w, g.table.h) * s, shortSide = Math.min(g.table.w, g.table.h) * s;
+    const fs = clamp(shortSide * .2, 7, 11);
+    let lbl = (it.type === 'teacher' ? "Teacher's desk" : Core.isFixture(it) ? TT.label : 'Bench').toUpperCase();
+    if (Core.isFixture(it) && measure(lbl, 600, fs) * 1.15 > longSide - 8) lbl = (TT.short || TT.label).toUpperCase();
+    if (floor || measure(lbl, 600, fs) * 1.15 > longSide - 8) continue;        // rugs speak for themselves; tiny items stay unlabelled
+    // label along the item's long side as it appears on the page
+    const tall = Math.abs(Math.sin((deg * Math.PI) / 180)) > .5 ? g.table.w > g.table.h : g.table.h > g.table.w;
+    h += `<text x="${f1(c.x)}" y="${f1(c.y + fs * .35)}" font-size="${f1(fs)}" font-weight="600" letter-spacing="1.4" text-anchor="middle" fill="${pal.ink2}"${tall ? ` transform="rotate(-90 ${f1(c.x)} ${f1(c.y)})"` : ''}>${esc(lbl)}</text>`;
   }
   const tables = visible.filter(i => Core.isSeated(i) && Core.itemGeom(i, room.scale).seats.length).map(it => {
     const g = Core.itemGeom(it, room.scale);

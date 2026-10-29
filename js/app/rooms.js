@@ -3,7 +3,8 @@
    1. ROOM BUILDER
 ================================================================= */
 const svg = $('#roomSvg');
-const PALETTE_ITEMS = ['single', 'pair', 'group4', 'group6', 'round4', 'custom', 'bench4', 'bench', 'teacher', 'board', 'door', 'window'];
+const PALETTE_ITEMS = ['single', 'pair', 'group4', 'group6', 'round4', 'custom', 'bench4', 'bench', 'teacher', 'board', 'door', 'window',
+  '|Storage and fittings', 'bookcase', 'cupboard', 'filing', 'lockers', 'trolley', 'sink', 'fume', 'rug'];  // '|' starts a sub-heading
 /* Palette entries that are a preset of another furniture type (a lab bench sized for 4). */
 const PALETTE_PRESETS = { bench4: { type: 'bench', label: 'Lab bench (4)', lenM: 1.6, sides: { t: 2, b: 2 } } };
 const PALETTE_LABELS = { bench: 'Lab bench (6)' };
@@ -16,6 +17,14 @@ const ICONS = {
   round4: '<circle cx="22" cy="15" r="8" fill="#EDE6DA" stroke="#B9AE9C"/><g fill="#fff" stroke="#8D93A0"><circle cx="22" cy="3.5" r="3"/><circle cx="22" cy="26.5" r="3"/><circle cx="8" cy="15" r="3"/><circle cx="36" cy="15" r="3"/></g>',
   custom: '<rect x="11" y="8" width="22" height="14" rx="2" fill="#EDE6DA" stroke="#B9AE9C"/><g fill="#fff" stroke="#8D93A0"><circle cx="22" cy="4" r="3"/><circle cx="22" cy="26" r="3"/><circle cx="6" cy="15" r="3"/><circle cx="38" cy="15" r="3"/></g>',
   bench4: '<rect x="10" y="9" width="24" height="11" rx="2" fill="#DDE7E3" stroke="#93ADA3"/><g fill="#fff" stroke="#8D93A0"><circle cx="16" cy="4.5" r="3"/><circle cx="28" cy="4.5" r="3"/><circle cx="16" cy="25" r="3"/><circle cx="28" cy="25" r="3"/></g>',
+  bookcase: '<rect x="7" y="9" width="30" height="11" rx="1.5" fill="#E9DCC8" stroke="#A8916F"/><path d="M13 9v11M19 9v11M25 9v11M31 9v11" stroke="#A8916F"/>',
+  cupboard: '<rect x="7" y="8" width="30" height="14" rx="1.5" fill="#E4E0D6" stroke="#9C9584"/><path d="M22 8v14" stroke="#9C9584"/><circle cx="19.5" cy="15" r="1" fill="#9C9584"/><circle cx="24.5" cy="15" r="1" fill="#9C9584"/>',
+  filing: '<rect x="14" y="5" width="16" height="20" rx="1.5" fill="#DCE1E6" stroke="#8C96A1"/><path d="M14 11.7h16M14 18.3h16" stroke="#8C96A1"/><path d="M20 8.5h4M20 15h4M20 21.5h4" stroke="#8C96A1" stroke-linecap="round"/>',
+  lockers: '<rect x="5" y="8" width="34" height="14" rx="1.5" fill="#D9E3EC" stroke="#8496A8"/><path d="M13.5 8v14M22 8v14M30.5 8v14" stroke="#8496A8"/><path d="M8 12h3M16.5 12h3M25 12h3M33.5 12h3" stroke="#8496A8" stroke-linecap="round"/>',
+  trolley: '<rect x="9" y="8" width="26" height="14" rx="2" fill="#E2DDEE" stroke="#8F86A8"/><path d="M13 11v8M17 11v8M21 11v8M25 11v8M29 11v8" stroke="#8F86A8" stroke-linecap="round"/>',
+  sink: '<rect x="9" y="7" width="26" height="16" rx="2" fill="#E3ECEF" stroke="#8AA2AA"/><rect x="13" y="10" width="18" height="10" rx="3" fill="#fff" stroke="#8AA2AA"/><circle cx="22" cy="15" r="1.3" fill="#8AA2AA"/>',
+  fume: '<rect x="8" y="5" width="28" height="18" rx="1.5" fill="#E7E3D9" stroke="#9A927E"/><rect x="11" y="13" width="22" height="8" rx="1" fill="#D7EAF2" stroke="#9A927E"/><path d="M15 9h14" stroke="#9A927E" stroke-linecap="round"/>',
+  rug: '<rect x="5" y="6" width="34" height="18" rx="4" fill="#F1E2D3" stroke="#C9A98A" stroke-dasharray="2 1.5"/><rect x="9" y="10" width="26" height="10" rx="2.5" fill="none" stroke="#C9A98A"/>',
   bench: '<rect x="3" y="9" width="38" height="11" rx="2" fill="#DDE7E3" stroke="#93ADA3"/><circle cx="12" cy="25" r="3" fill="#fff" stroke="#8D93A0"/><circle cx="32" cy="25" r="3" fill="#fff" stroke="#8D93A0"/>',
   teacher: '<rect x="8" y="5" width="28" height="13" rx="2" fill="#DCE3EE" stroke="#8E9BB2"/><circle cx="22" cy="24" r="4" fill="#8E9BB2"/>',
   board: '<line x1="4" y1="8" x2="40" y2="8" stroke="#2F3A4F" stroke-width="5" stroke-linecap="round"/><text x="22" y="24" font-size="8" text-anchor="middle" fill="#2F3A4F" font-family="Figtree" font-weight="700">FRONT</text>',
@@ -24,7 +33,7 @@ const ICONS = {
 };
 
 function buildPalette() {
-  $('#paletteGrid').innerHTML = PALETTE_ITEMS.map(t => `<button class="pal-item" data-type="${t}"><svg viewBox="0 0 44 30">${ICONS[t]}</svg>${esc(palLabel(t))}</button>`).join('');
+  $('#paletteGrid').innerHTML = PALETTE_ITEMS.map(t => t[0] === '|' ? `<div class="pal-sub">${esc(t.slice(1))}</div>` : `<button class="pal-item" data-type="${t}"><svg viewBox="0 0 44 30">${ICONS[t]}</svg>${esc(palLabel(t))}</button>`).join('');
   $('#presetRow').innerHTML = Object.entries(Sample.PRESETS).map(([k, p]) => `<button class="btn sm" data-preset="${k}">${esc(p.label)}</button>`).join('');
 }
 
@@ -147,7 +156,8 @@ function renderRoomSvg() {
   h += `<path d="${path}" class="b-floor" fill-opacity=".55"/>`;
   const items = room.items.slice();
   if (ui.preview) items.push(ui.preview);
-  for (const it of items.filter(i => !Core.isWall(i))) h += builderItem(room, it, seatInfo);
+  // rugs first, so furniture standing on them is drawn on top
+  for (const it of items.filter(i => !Core.isWall(i)).sort((a, b) => Core.isFloor(b) - Core.isFloor(a))) h += builderItem(room, it, seatInfo);
   h += `<path d="${path}" class="b-wall"/>`;
   for (const it of items.filter(i => Core.isWall(i))) h += builderItem(room, it, seatInfo);
   // wall lengths
@@ -210,7 +220,7 @@ function builderItem(room, it, seatInfo) {
     return h + '</g>';
   }
   const g = Core.itemGeom(it, room.scale);
-  const tcls = it.type === 'teacher' ? 'b-teacher' : it.type === 'bench' ? 'b-bench' : 'b-table';
+  const tcls = Core.isFixture(it) ? `b-fix b-fix-${it.type}` : it.type === 'teacher' ? 'b-teacher' : it.type === 'bench' ? 'b-bench' : 'b-table';
   let h = `<g class="${cls}" data-item="${it.id}" ${preview ? 'opacity=".7"' : ''}>`;
   h += `<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="transparent"/>`;
   h += Core.isRound(it)
@@ -218,6 +228,16 @@ function builderItem(room, it, seatInfo) {
     : `<rect class="${tcls}" x="${g.table.x}" y="${g.table.y}" width="${g.table.w}" height="${g.table.h}" rx=".18"/>`;
   const cx = g.table.x + g.table.w / 2, cy = g.table.y + g.table.h / 2;
   if (it.type === 'teacher') h += `<text class="b-label" x="${cx}" y="${cy}">Teacher</text>`;
+  else if (Core.isFixture(it)) {
+    // label along the long side, shrunk to fit; the short name ("Files", "Laptops") if the full one won't
+    const T = Core.TYPES[it.type], long = Math.max(g.table.w, g.table.h) - .3, short = Math.min(g.table.w, g.table.h);
+    const fit = t => Math.min(.48, short * .55, long / (t.length * .56));
+    let lbl = T.label;
+    if (fit(lbl) < .3 && T.short) lbl = T.short;
+    const fs = fit(lbl);
+    const ly = Core.isFloor(it) ? g.table.y + fs * .9 : cy;   // a rug's label sits at its top edge, clear of furniture on it
+    if (fs >= .22) h += `<text class="b-label" x="${cx}" y="${ly}" style="font-size:${r2(fs)}px" ${!Core.isFloor(it) && g.table.h > g.table.w ? `transform="rotate(-90 ${cx} ${cy})"` : ''}>${esc(lbl)}</text>`;
+  }
   else if (it.type === 'bench' && !g.seats.length) h += `<text class="b-label" x="${cx}" y="${cy}">Bench</text>`;
   const sr = .21 / (room.scale || .5);
   for (const s of g.seats) {

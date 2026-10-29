@@ -92,7 +92,10 @@ browser.
 - **Rooms** (side menu): room layouts are shared by all classes. Draw the walls
   (rectangle, L-shape or your own polygon), then drag furniture on from the
   palette (desks, tables of 4 and 6, round tables, custom tables, and lab
-  benches for 4 or 6). Furniture snaps to a 0.25 m grid, and pulls flush
+  benches for 4 or 6), plus storage and fittings so the plan matches the real
+  room: bookcases, cupboards, filing cabinets, lockers, a laptop trolley, a
+  sink, a fume cupboard and a reading rug (tables can stand on the rug). They
+  have no seats and appear, labelled, on printed plans. Furniture snaps to a 0.25 m grid, and pulls flush
   against a wall when it's dragged within 0.25 m of one. Tap a seat to mark
   it unavailable. Each seat shows its distance from the board.
 
