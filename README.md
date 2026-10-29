@@ -83,7 +83,8 @@ browser.
   palette. Tap a seat to mark it unavailable. Each seat shows its distance
   from the board.
 
-Shortcuts (Rooms): `R` rotates, `Del` deletes, `Ctrl/⌘+D` duplicates, and the
+Shortcuts (Rooms): `R` rotates, `Del` deletes, `Ctrl/⌘+D` duplicates (the copy goes
+right beside the table in the same orientation, so repeating it builds a row), and the
 arrow keys nudge. `Shift` while drawing walls turns off snapping. Undo and
 redo (`Ctrl/⌘+Z`, `Ctrl/⌘+Shift+Z`) work everywhere.
 

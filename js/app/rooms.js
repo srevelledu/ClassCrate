@@ -304,14 +304,35 @@ function itemAction(act) {
     const copy = JSON.parse(JSON.stringify(it));
     copy.id = uid(it.type);
     if (Core.isWall(it)) { copy.x += 0; mutate(() => { room.items.push(copy); ui.selItem = copy.id; }); return; }
-    const g = Core.itemGeom(it, room.scale);
-    const gap = fstep(room) * 2;
-    const tries = [[g.w + gap, 0], [0, g.h + gap], [-(g.w + gap), 0], [0, -(g.h + gap)]];
-    let placed = false;
-    for (const [dx, dy] of tries) { copy.x = it.x + dx; copy.y = it.y + dy; if (!Core.itemProblem(room, copy)) { placed = true; break; } }
-    if (!placed) { const s = findFreeSpot(room, copy, { x: it.x, y: it.y }); if (!s) return toast('No free space to duplicate into.'); copy.x = s.x; copy.y = s.y; }
+    const spot = dupSpot(room, it, copy);
+    if (!spot) return toast('No free space to duplicate into.');
+    copy.x = spot.x; copy.y = spot.y;
     mutate(() => { room.items.push(copy); ui.selItem = copy.id; });
   }
+}
+
+/* Where a duplicate goes: directly alongside the original in the same orientation, continuing the row
+   along the table's length (sideways for a table facing the board, up/down for a turned one). Copies made
+   earlier in the same row are skipped, so pressing Duplicate again keeps extending it. If a wall or other
+   furniture ends the row both ways, the copy starts a parallel row with a walking gap; failing that, it goes
+   in the nearest free space. */
+function dupSpot(room, it, copy) {
+  const g = Core.itemGeom(it, room.scale);
+  const lengthwise = (it.rot || 0) % 2 === 0;
+  const at = (dx, dy) => ({ ...copy, x: r2(it.x + dx), y: r2(it.y + dy) });
+  const sameRowItem = t => room.items.some(o => o.type === it.type && (o.rot || 0) === (it.rot || 0) && Math.abs(o.x - t.x) < .01 && Math.abs(o.y - t.y) < .01);
+  const along = lengthwise ? [[g.w, 0], [-g.w, 0]] : [[0, g.h], [0, -g.h]];
+  for (const [dx, dy] of along) {
+    for (let k = 1; k <= 60; k++) {
+      const t = at(dx * k, dy * k), prob = Core.itemProblem(room, t);
+      if (!prob) return t;
+      if (prob !== 'overlap' || !sameRowItem(t)) break;      // a wall or other furniture ends the row this way
+    }
+  }
+  const gap = fstep(room) * 2;                              // a 0.5 m walkway between rows
+  const across = lengthwise ? [[0, g.h + gap], [0, -(g.h + gap)]] : [[g.w + gap, 0], [-(g.w + gap), 0]];
+  for (const [dx, dy] of across) { const t = at(dx, dy); if (!Core.itemProblem(room, t)) return t; }
+  return findFreeSpot(room, copy, { x: it.x, y: it.y });
 }
 
 /* ----- drawing helpers ----- */
