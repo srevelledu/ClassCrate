@@ -504,7 +504,9 @@ function buildPlanSVG(cls, room, opts) {
   }
   // turned labels read towards the board (top-to-bottom when the board is at the bottom of the page)
   const turnDeg = view.boardSide.startsWith('top') ? -90 : 90;
-  const tray = [];
+  // spare seats (unavailable or empty) go in a layer under the names, so a name label that spreads
+  // across a neighbouring spare seat is never covered by its marker
+  const tray = [], spare = [];
   for (const o of P) {
     const { st, p, w } = o;
     const col = colourOf.get(st.itemId) || pal.tables[0];
@@ -512,15 +514,15 @@ function buildPlanSVG(cls, room, opts) {
     const stu = sid && stById.get(sid);
     if (st.unavailable) {
       if (!priv) continue; // unavailable seats are an editing aid only
-      tray.push(`<g><circle cx="${f1(p.x)}" cy="${f1(p.y)}" r="8" fill="#F1F0EC" stroke="#CFCBC2" stroke-dasharray="3 2"/><text x="${f1(p.x)}" y="${f1(p.y + 3.8)}" font-size="10" text-anchor="middle" fill="#A9A49A">×</text></g>`);
+      spare.push(`<g><circle cx="${f1(p.x)}" cy="${f1(p.y)}" r="8" fill="#F1F0EC" stroke="#CFCBC2" stroke-dasharray="3 2"/><text x="${f1(p.x)}" y="${f1(p.y + 3.8)}" font-size="10" text-anchor="middle" fill="#A9A49A">×</text></g>`);
       continue;
     }
     if (!stu) {
       // empty seat: a faint chair on paper; a dashed drop target while editing
-      if (!opts.interactive) { tray.push(`<circle cx="${f1(p.x)}" cy="${f1(p.y)}" r="5" fill="none" stroke="${shade(col, -18, 5)}" stroke-opacity=".55" stroke-width="1.2"/>`); continue; }
+      if (!opts.interactive) { spare.push(`<circle cx="${f1(p.x)}" cy="${f1(p.y)}" r="5" fill="none" stroke="${shade(col, -18, 5)}" stroke-opacity=".55" stroke-width="1.2"/>`); continue; }
       const hh = o.h, cy = o.cy ?? (o.dir === 'U' ? o.edge - 2 - hh / 2 : o.edge + 2 + hh / 2);
       const bw = o.turned ? Math.max(o.len, 30) : w, bh = o.turned ? o.t : hh;
-      tray.push(`<g data-seat="${st.key}"${o.turned ? ` transform="rotate(${turnDeg} ${f1(o.cx)} ${f1(cy)})"` : ''}><rect x="${f1(o.cx - bw / 2)}" y="${f1(cy - bh / 2)}" width="${f1(bw)}" height="${f1(bh)}" rx="${f1(bh / 2)}" fill="#fff" fill-opacity=".55" stroke="${shade(col, -22, 5)}" stroke-width="1.2" stroke-dasharray="4 4"/></g>`);
+      spare.push(`<g data-seat="${st.key}"${o.turned ? ` transform="rotate(${turnDeg} ${f1(o.cx)} ${f1(cy)})"` : ''}><rect x="${f1(o.cx - bw / 2)}" y="${f1(cy - bh / 2)}" width="${f1(bw)}" height="${f1(bh)}" rx="${f1(bh / 2)}" fill="#fff" fill-opacity=".55" stroke="${shade(col, -22, 5)}" stroke-width="1.2" stroke-dasharray="4 4"/></g>`);
       continue;
     }
     if (o.turned) {
@@ -571,7 +573,7 @@ function buildPlanSVG(cls, room, opts) {
     g += '</g>';
     tray.push(g);
   }
-  h += tray.join('');
+  h += spare.join('') + tray.join('');
 
   // footer
   const nSeated = Object.keys(assign).length;
