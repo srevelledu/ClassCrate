@@ -34,10 +34,15 @@ browser.
   its name ("12CHEM", "Year 9 Maths", "Physical Education", "Japanese"…), and
   you can pick a different one, and the class colour, under **Students → Colour & icon** or the card's ⋮ menu.
 - **Getting started**: the Classes page shows a three-step guide (create a
-  class, add students, draw your room). Each step points at the control to use
-  and ticks itself off. Once all three are done, or if you press **Hide**, it
-  moves out of the way to **Getting started** at the bottom of the side menu,
-  which brings it back.
+  class, add students, draw your room). Each step's button starts a short
+  guided tour that highlights one control at a time with a tip (Back, Next,
+  ✕ to stop): naming the class, its colour and room; pasting or importing
+  students, front priority and keep-apart rules; and drawing the walls, adding
+  furniture and the board, and turning or duplicating tables. Creating the
+  class carries straight on into adding students. Steps tick themselves off,
+  and finished steps offer **Show me again**. Once all three are done, or if
+  you press **Hide**, the guide moves to **Getting started** at the bottom of
+  the side menu.
 - **Students & rules**: the class list, front-priority students and the
   **keep apart** / **keep together** rules. Seating plans and groups both use
   these rules. **Import CSV…** reads a class list exported from a school system
