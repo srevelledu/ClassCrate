@@ -343,6 +343,33 @@ test('reports which columns it used', () => {
   assert.equal(namesFromRows(parseCSV('Name\nA')).columns, 'Name');
   assert.equal(namesFromRows(parseCSV('Mia Patel')).columns, 'column 1');
 });
+test('heading spellings: first_name / last_name, FirstName / LastName, Forename / Family Name', () => {
+  assert.deepEqual(names('id,first_name,last_name\n7,Ada,Lovelace'), ['Ada Lovelace']);
+  assert.deepEqual(names('StudentID,LastName,FirstName\n7,Curie,Marie'), ['Marie Curie']);
+  assert.deepEqual(names('Code,Family Name,Forename\n7,Franklin,Rosalind'), ['Rosalind Franklin']);
+});
+test('"Student" and "Pupil" headings are name columns, wherever they are', () => {
+  assert.deepEqual(names('Student ID,Year,Student\n1001,10,Isaac Newton\n1002,10,Ada Lovelace'), ['Isaac Newton', 'Ada Lovelace']);
+  assert.deepEqual(names('Year,Pupil Name\n10,Alan Turing'), ['Alan Turing']);
+});
+test('a "Last name, First name" column is turned round, and capitalised surnames are tidied', () => {
+  assert.deepEqual(names('ID,"Last name, First name",Year\n1,"Curie, Marie",10\n2,"NEWTON, Isaac",10'), ['Marie Curie', 'Isaac Newton']);
+  assert.deepEqual(names('Name (Last, First)\n"O\'CONNOR, Liam"\n"SMITH-JONES, Kate"'), ["Liam O'Connor", 'Kate Smith-Jones']);
+});
+test('parent, guardian, teacher and username columns are never used for names', () => {
+  const csv = 'Parent First Name,Student First Name,Student Surname,Parent Surname,Teacher Name,Username\nJo,Ada,Lovelace,Byron,Ms Hill,alovelace';
+  assert.deepEqual(names(csv), ['Ada Lovelace']);
+  assert.equal(namesFromRows(parseCSV(csv)).columns, 'Student First Name + Student Surname');
+});
+test('no recognisable headings: finds the name column by its contents, not by position', () => {
+  assert.deepEqual(names('1001,Isaac Newton,10A,inewton@school.edu\n1002,Ada Lovelace,10A,alovelace@school.edu'), ['Isaac Newton', 'Ada Lovelace']);
+  assert.equal(namesFromRows(parseCSV('1001,Isaac Newton,10A')).columns, 'column 2');
+  assert.deepEqual(names('1001,"Newton, Isaac",10\n1002,"Lovelace, Ada",10'), ['Isaac Newton', 'Ada Lovelace']);
+  assert.deepEqual(names('1001,Isaac,Newton,10\n1002,Ada,Lovelace,10'), ['Isaac Newton', 'Ada Lovelace']);
+});
+test('an unrecognised heading row above a name column is skipped', () => {
+  assert.deepEqual(names('Code,Who,Year\n1,Ada Lovelace,10\n2,Alan Turing,10'), ['Ada Lovelace', 'Alan Turing']);
+});
 test('an empty file gives no names', () => {
   assert.deepEqual(names(''), []);
   assert.deepEqual(names('\n\n'), []);

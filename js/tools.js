@@ -213,48 +213,100 @@ const Tools = (() => {
     return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c));
   }
 
+  /* Column headings, matched after lower-casing and turning _ - . into spaces ("first_name", "FirstName"
+     and "First Name" all read as "first name"). Columns about other people (parents, teachers...) or
+     other details are never used for names, even if their heading contains "name". */
   const HEAD = {
-    preferred: /^prefer|preferred/i,
-    first: /^(first|given|fore)\s*(name)?s?$|first\s*name|given\s*name|forename/i,
-    last: /^(last|sur|family)\s*(name)?$|surname|last\s*name|family\s*name/i,
-    full: /^((student|full|display)\s*)?name$|student\s*name|full\s*name/i,
+    skip: /\b(parent|guardian|carer|caregiver|mother|father|teacher|staff|contact|emergency|doctor|user\s*name|login|e ?mail|school|house|form|subject|course|tutor|mentor|sibling|class\s*name|street|suburb|address)\b/,
+    preferred: /\bpreferred\b|\bknown as\b|\bnick\s*name\b/,
+    first: /\b(first|given|fore)\s*names?\b|^(first|given|forename)$/,
+    last: /\b(last|family|sur)\s*names?\b|^(last|family|surname)$/,
+    full: /^((student|pupil|learner|child|full|legal|display)\s*)?(full\s*)?names?\b|^(student|pupil|learner|child)$|\b(student|pupil|full)\s*names?\b/,
+    other: /\b(id|code|number|no|year|level|grade|class|email|dob|date|birth|gender|sex|phone|mobile|house|form|group|homeroom)\b/,
   };
+  const normHead = h => String(h || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
+  function headRole(h) {
+    const t = normHead(h);
+    if (!t || HEAD.skip.test(t)) return null;
+    const first = HEAD.first.test(t), last = HEAD.last.test(t);
+    if (first && last) return 'full';                       // "Last name, First name" in one column
+    if (HEAD.preferred.test(t)) return last ? 'last' : 'preferred';
+    if (first) return 'first';
+    if (last) return 'last';
+    if (HEAD.full.test(t)) return 'full';
+    return null;
+  }
+  /* What a cell holding a name looks like: letters, spaces, hyphens, apostrophes and full stops only. */
+  const NAME_RE = /^[\p{L}][\p{L}\p{M}'’\-. ]*$/u;
+  const isNameLike = v => v.length >= 2 && v.length <= 60 && NAME_RE.test(v);
+  const isCommaName = v => { const m = v.match(/^([^,]+),\s*([^,]+)$/); return !!m && isNameLike(m[1].trim()) && isNameLike(m[2].trim()); };
+  /* SMITH → Smith (school systems often export surnames in capitals); mixed-case words are left alone. */
+  const tidyWord = w => (/^[\p{L}'’-]{2,}$/u.test(w) && w === w.toUpperCase() ? w.toLowerCase().replace(/(^|[-'’])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()) : w);
+  const tidy = nm => nm.split(' ').map(tidyWord).join(' ');
+
+  /* Look at a column's contents to judge whether it holds names. */
+  function columnStats(rows, c) {
+    let n = 0, name = 0, comma = 0, multi = 0;
+    for (const r of rows) {
+      const v = (r[c] || '').trim();
+      if (!v) continue;
+      n++;
+      if (isCommaName(v)) { comma++; name++; continue; }
+      if (isNameLike(v)) { name++; if (/\s/.test(v)) multi++; }
+    }
+    return { n, name: n ? name / n : 0, comma: n ? comma / n : 0, multi: n ? multi / n : 0 };
+  }
+
   /* Work out student names from CSV rows, as exported by school systems (SEQTA, Compass, Sentral,
-     OneSchool) or typed into a spreadsheet. Uses header names where present: preferred name over
-     first name, then surname. Without a header, one column is a full name and two columns are
-     first name then surname. A "Surname, First" cell is turned round.
-     Returns { names, hasHeader, columns } where columns describes what was used. */
+     OneSchool) or typed into a spreadsheet. Uses column headings where present: preferred name over
+     first name, then surname, or a single name column. Without recognisable headings it reads the
+     contents: a column of "Surname, First" or full names, else two columns of single names (first
+     name then surname, which the import screen can swap). "Surname, First" cells are turned round. */
   function namesFromRows(rows, { swap = false } = {}) {
     if (!rows.length) return { names: [], hasHeader: false, columns: '' };
-    const head = rows[0].map(h => h.toLowerCase());
-    const col = re => head.findIndex(h => re.test(h));
-    const hasHeader = head.some(h => HEAD.first.test(h) || HEAD.last.test(h) || HEAD.full.test(h) || HEAD.preferred.test(h));
-    let firstI = -1, prefI = -1, lastI = -1, fullI = -1, used;
+    const width = Math.max(...rows.map(r => r.length));
+    const roles = rows[0].map(headRole);
+    let hasHeader = roles.some(Boolean);
+    let firstI = -1, prefI = -1, lastI = -1, fullI = -1;
     if (hasHeader) {
-      prefI = col(HEAD.preferred);
-      firstI = col(HEAD.first);
-      if (firstI === prefI) firstI = -1;
+      const body = rows.slice(1);
+      // where a role appears twice ("Name" and "Student Name"), use the column that holds more names
+      const pick = role => roles.map((r, i) => (r === role ? i : -1)).filter(i => i >= 0).sort((a, b) => columnStats(body, b).name - columnStats(body, a).name)[0] ?? -1;
+      prefI = pick('preferred'); firstI = pick('first'); lastI = pick('last'); fullI = pick('full');
       if (firstI < 0 && prefI >= 0) { firstI = prefI; prefI = -1; }
-      lastI = col(HEAD.last);
-      fullI = col(HEAD.full);
-      if (firstI < 0 && lastI < 0 && fullI < 0) fullI = 0;
-    } else if (rows[0].length >= 2) { firstI = 0; lastI = 1; }
-    else fullI = 0;
+      if (firstI >= 0 || lastI >= 0) fullI = -1;
+    } else {
+      // no recognisable headings: judge each column by its contents
+      hasHeader = rows.length > 1 && rows[0].some(h => HEAD.other.test(normHead(h)));
+      const body = hasHeader ? rows.slice(1) : rows;
+      const stats = Array.from({ length: width }, (_, c) => ({ c, ...columnStats(body, c) })).filter(s => s.n);
+      const best = (list, key) => list.sort((a, b) => b[key] - a[key] || b.name - a.name)[0];
+      const commaCol = best(stats.filter(s => s.comma >= 0.6), 'comma');
+      const fullCol = best(stats.filter(s => s.name >= 0.8 && s.multi >= 0.6), 'multi');
+      const singles = stats.filter(s => s.name >= 0.8 && s.multi < 0.6);
+      if (commaCol) fullI = commaCol.c;
+      else if (fullCol) fullI = fullCol.c;
+      else if (singles.length >= 2) { firstI = singles[0].c; lastI = singles[1].c; }
+      else fullI = (best(stats.slice(), 'name') || { c: 0 }).c;
+    }
     if (swap && firstI >= 0 && lastI >= 0) [firstI, lastI] = [lastI, firstI];
     const body = hasHeader ? rows.slice(1) : rows;
     const seen = new Set(), names = [];
     for (const r of body) {
       let nm;
-      if (firstI >= 0 || lastI >= 0) nm = [(prefI >= 0 && r[prefI]) || r[firstI] || '', r[lastI] || ''].join(' ');
+      if (firstI >= 0 || lastI >= 0) nm = [(prefI >= 0 && (r[prefI] || '').trim()) || r[firstI] || '', r[lastI] || ''].join(' ');
       else nm = r[fullI] || '';
       nm = nm.replace(/\s+/g, ' ').trim();
       const m = nm.match(/^([^,]+),\s*([^,]+)$/);
-      if (m) nm = `${m[2]} ${m[1]}`;
+      if (m) nm = `${m[2].trim()} ${m[1].trim()}`;
+      nm = tidy(nm);
       if (!nm || seen.has(nm.toLowerCase())) continue;
       seen.add(nm.toLowerCase()); names.push(nm);
     }
-    if (firstI >= 0 || lastI >= 0) used = hasHeader ? `${prefI >= 0 ? `${rows[0][prefI]} (or ${rows[0][firstI]})` : rows[0][firstI] ?? ''} + ${rows[0][lastI] ?? ''}`.replace(/^ \+ | \+ $/g, '') : (swap ? 'column 2 + column 1' : 'column 1 + column 2');
-    else used = hasHeader ? rows[0][fullI] : 'column 1';
+    const label = i => (hasHeader && rows[0][i] ? rows[0][i] : `column ${i + 1}`);
+    let used;
+    if (firstI >= 0 || lastI >= 0) used = [prefI >= 0 ? `${label(prefI)} (or ${label(firstI)})` : firstI >= 0 ? label(firstI) : '', lastI >= 0 ? label(lastI) : ''].filter(Boolean).join(' + ');
+    else used = label(fullI);
     return { names, hasHeader, columns: used };
   }
 
