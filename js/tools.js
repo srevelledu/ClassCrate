@@ -221,7 +221,8 @@ const Tools = (() => {
     preferred: /\bpreferred\b|\bknown as\b|\bnick\s*name\b/,
     first: /\b(first|given|fore)\s*names?\b|^(first|given|forename)$/,
     last: /\b(last|family|sur)\s*names?\b|^(last|family|surname)$/,
-    full: /^((student|pupil|learner|child|full|legal|display)\s*)?(full\s*)?names?\b|^(student|pupil|learner|child)$|\b(student|pupil|full)\s*names?\b/,
+    full: /^((student|pupil|learner|child|full|legal|display)\s*)?(full\s*)?names?\b|^(students?|pupils?|learners?|kids?|child|children)$|\b(student|pupil|full)\s*names?\b|\b(list|roll|register)$/,
+    word: /\b(names?|students?|pupils?|learners?|kids?|child|children|list|roll|register|first|last|surname|given|family)\b/,
     other: /\b(id|code|number|no|year|level|grade|class|email|dob|date|birth|gender|sex|phone|mobile|house|form|group|homeroom)\b/,
   };
   const normHead = h => String(h || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/[_\-.]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -261,12 +262,20 @@ const Tools = (() => {
      OneSchool) or typed into a spreadsheet. Uses column headings where present: preferred name over
      first name, then surname, or a single name column. Without recognisable headings it reads the
      contents: a column of "Surname, First" or full names, else two columns of single names (first
-     name then surname, which the import screen can swap). "Surname, First" cells are turned round. */
-  function namesFromRows(rows, { swap = false } = {}) {
+     name then surname, which the import screen can swap). "Surname, First" cells are turned round.
+     Title rows above the headings are dropped. `header` (true/false) overrides whether the first row
+     is headings, for headings it can't recognise. */
+  function namesFromRows(rows, { swap = false, header } = {}) {
     if (!rows.length) return { names: [], hasHeader: false, columns: '' };
+    // the heading row is the one (of the first few) with the most recognisable headings; anything
+    // above it is a title ("Year 7 Maths", "Class list – 7B") and is dropped
+    let h = -1, most = 0;
+    rows.slice(0, 5).forEach((r, i) => { const k = r.filter(headRole).length; if (k > most) { most = k; h = i; } });
+    if (header === false) h = -1;
+    if (h > 0) rows = rows.slice(h);
     const width = Math.max(...rows.map(r => r.length));
-    const roles = rows[0].map(headRole);
-    let hasHeader = roles.some(Boolean);
+    const roles = h >= 0 ? rows[0].map(headRole) : [];
+    let hasHeader = h >= 0;
     let firstI = -1, prefI = -1, lastI = -1, fullI = -1;
     if (hasHeader) {
       const body = rows.slice(1);
@@ -277,7 +286,7 @@ const Tools = (() => {
       if (firstI >= 0 || lastI >= 0) fullI = -1;
     } else {
       // no recognisable headings: judge each column by its contents
-      hasHeader = rows.length > 1 && rows[0].some(h => HEAD.other.test(normHead(h)));
+      hasHeader = header ?? (rows.length > 1 && rows[0].some(c => HEAD.other.test(normHead(c)) || HEAD.word.test(normHead(c))));
       const body = hasHeader ? rows.slice(1) : rows;
       const stats = Array.from({ length: width }, (_, c) => ({ c, ...columnStats(body, c) })).filter(s => s.n);
       const best = (list, key) => list.sort((a, b) => b[key] - a[key] || b.name - a.name)[0];
@@ -292,7 +301,10 @@ const Tools = (() => {
     if (swap && firstI >= 0 && lastI >= 0) [firstI, lastI] = [lastI, firstI];
     const body = hasHeader ? rows.slice(1) : rows;
     const seen = new Set(), names = [];
+    const headKey = hasHeader ? rows[0].join('|').toLowerCase() : null;
     for (const r of body) {
+      // headings repeated further down (one block per class), or a second heading row ("Class list" over "Names")
+      if (hasHeader && (r.join('|').toLowerCase() === headKey || r.filter(c => c).every(headRole))) continue;
       let nm;
       if (firstI >= 0 || lastI >= 0) nm = [(prefI >= 0 && (r[prefI] || '').trim()) || r[firstI] || '', r[lastI] || ''].join(' ');
       else nm = r[fullI] || '';

@@ -50,6 +50,9 @@ browser.
   First name, Given names, Surname, Preferred name, `first_name`, `LastName`…),
   ignoring parent, teacher and username columns; without headings it works out
   which column holds names from the contents rather than assuming the first.
+  Title rows above the headings and headings repeated further down are
+  skipped, and the import screen has a **First row is column headings**
+  switch for headings it doesn't recognise.
   "Surname, First" cells are turned round and capitalised surnames tidied
   (SMITH → Smith). You can add the names or replace the class.
 - **Seating plan**: **Generate** or **Shuffle**. Drag names to swap seats or
@@ -190,8 +193,9 @@ node tests/tools.test.mjs
 - CSV files with commas, tabs or semicolons, quoted fields, header rows, a
   byte-order mark, and blank preferred names; heading spellings such as
   `first_name` and `LastName`; "Last name, First name" columns; parent and
-  teacher columns being ignored; and files without headings where the names
-  aren't in the first column.
+  teacher columns being ignored; plural headings (Students, Pupils, Class
+  List), title rows and repeated headings never becoming students; and files
+  without headings where the names aren't in the first column.
 
 ## Branding
 

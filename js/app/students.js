@@ -167,16 +167,17 @@ async function importCsv(file) {
   const rows = Tools.parseCSV(text);
   if (!rows.length) return toast('That file is empty.');
   const cls = activeClass();
-  let swap = false;
+  let swap = false, header;
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   const draw = () => {
-    const res = Tools.namesFromRows(rows, { swap }), have = new Set(cls.students.map(s => s.name.toLowerCase()));
+    const res = Tools.namesFromRows(rows, { swap, header }), have = new Set(cls.students.map(s => s.name.toLowerCase()));
     const fresh = res.names.filter(n => !have.has(n.toLowerCase()));
     const twoCols = res.columns.includes('+');
     bg.innerHTML = `<form class="modal wide" role="dialog" aria-label="Import class list"><h3>Import class list</h3>
       <p>Found <b>${res.names.length}</b> name${res.names.length === 1 ? '' : 's'} using <b>${esc(res.columns)}</b>${res.names.length - fresh.length ? `. ${res.names.length - fresh.length} already in ${esc(cls.name)}.` : '.'}</p>
       <div class="csv-preview">${res.names.slice(0, 12).map(n => `<span class="chip">${esc(n)}</span>`).join('')}${res.names.length > 12 ? `<span class="hint">…and ${res.names.length - 12} more</span>` : ''}</div>
+      <label class="check"><input type="checkbox" id="csvHeader" ${res.hasHeader ? 'checked' : ''}> First row is column headings, not a student</label>
       ${twoCols ? '<label class="check"><input type="checkbox" id="csvSwap" ' + (swap ? 'checked' : '') + '> Names look back to front? Swap first name and surname</label>' : ''}
       ${cls.students.length ? `<label class="check"><input type="radio" name="csvMode" value="add" checked> Add the ${fresh.length} new name${fresh.length === 1 ? '' : 's'} to ${esc(cls.name)}</label>
       <label class="check"><input type="radio" name="csvMode" value="replace"> Replace the class list (removes ${cls.students.length} students, their rules and seats)</label>` : ''}
@@ -194,7 +195,8 @@ async function importCsv(file) {
     });
   };
   bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-close]')) bg.remove(); });
-  bg.addEventListener('change', e => { if (e.target.id === 'csvSwap') { swap = e.target.checked; draw(); } });
+  bg.addEventListener('change', e => { if (e.target.id === 'csvSwap') { swap = e.target.checked; draw(); }
+    if (e.target.id === 'csvHeader') { header = e.target.checked; draw(); } });
   bg.addEventListener('keydown', e => { if (e.key === 'Escape') bg.remove(); });
   draw();
   document.body.appendChild(bg);

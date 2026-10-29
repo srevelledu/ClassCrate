@@ -370,6 +370,23 @@ test('no recognisable headings: finds the name column by its contents, not by po
 test('an unrecognised heading row above a name column is skipped', () => {
   assert.deepEqual(names('Code,Who,Year\n1,Ada Lovelace,10\n2,Alan Turing,10'), ['Ada Lovelace', 'Alan Turing']);
 });
+test('plural and list-style headings are not taken as students', () => {
+  for (const h of ['Students', 'Pupils', 'Learners', 'Kids', 'Children', 'Roll', 'Class List', 'Student list'])
+    assert.deepEqual(names(`${h}\nMia Patel\nJack Lee`), ['Mia Patel', 'Jack Lee'], h);
+});
+test('a title row above the headings is dropped', () => {
+  assert.deepEqual(names('Year 7 Maths\nFirst Name,Surname\nMia,Patel\nJack,Lee'), ['Mia Patel', 'Jack Lee']);
+  assert.deepEqual(names('7B Class List,,\nFirst,Last,ID\nMia,Patel,1'), ['Mia Patel']);
+  assert.deepEqual(names('Class list\nNames\nMia Patel'), ['Mia Patel']);
+});
+test('headings repeated further down the file are skipped', () => {
+  assert.deepEqual(names('First Name,Surname,Class\nMia,Patel,7A\nFirst Name,Surname,Class\nJack,Lee,7B'), ['Mia Patel', 'Jack Lee']);
+});
+test('the header option overrides heading detection', () => {
+  assert.deepEqual(names('Nome,Cognome\nMia,Patel', { header: true }), ['Mia Patel']);
+  assert.deepEqual(names('Students\nMia Patel', { header: false }), ['Students', 'Mia Patel']);
+  assert.equal(namesFromRows(parseCSV('Students\nMia Patel')).hasHeader, true);
+});
 test('an empty file gives no names', () => {
   assert.deepEqual(names(''), []);
   assert.deepEqual(names('\n\n'), []);
