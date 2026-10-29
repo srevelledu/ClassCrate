@@ -163,7 +163,15 @@ function pitFrame(ts) {
 }
 function wakePit() { if (!pit.raf) { pit.last = 0; pit.raf = requestAnimationFrame(pitFrame); } }
 async function startNoise() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return noiseMessage("This browser can't use a microphone here.");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // browsers only offer the microphone to secure (https://) pages
+    if (location.protocol === 'http:' && !window.isSecureContext) {
+      const secure = 'https://' + location.host + location.pathname;
+      $('#nmHint').innerHTML = `The microphone only works on a secure page. Open <a href="${esc(secure)}">${esc(secure.replace(/\/$/, ''))}</a> (with https) and try again.`;
+      return;
+    }
+    return noiseMessage("This browser can't use a microphone here. Try opening ClassCrate in Chrome, Edge, Safari or Firefox.");
+  }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
     const ac = audioCtx();
