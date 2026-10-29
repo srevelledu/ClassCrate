@@ -3,7 +3,11 @@
    1. ROOM BUILDER
 ================================================================= */
 const svg = $('#roomSvg');
-const PALETTE_ITEMS = ['single', 'pair', 'group4', 'group6', 'round4', 'custom', 'bench', 'teacher', 'board', 'door', 'window'];
+const PALETTE_ITEMS = ['single', 'pair', 'group4', 'group6', 'round4', 'custom', 'bench4', 'bench', 'teacher', 'board', 'door', 'window'];
+/* Palette entries that are a preset of another furniture type (a lab bench sized for 4). */
+const PALETTE_PRESETS = { bench4: { type: 'bench', label: 'Lab bench (4)', lenM: 1.6, sides: { t: 2, b: 2 } } };
+const PALETTE_LABELS = { bench: 'Lab bench (6)' };
+const palLabel = t => PALETTE_PRESETS[t] ? PALETTE_PRESETS[t].label : PALETTE_LABELS[t] || Core.TYPES[t].label;
 const ICONS = {
   single: '<rect x="15" y="5" width="14" height="9" rx="2" fill="#EDE6DA" stroke="#B9AE9C"/><circle cx="22" cy="21" r="4" fill="#fff" stroke="#8D93A0"/>',
   pair: '<rect x="6" y="5" width="32" height="9" rx="2" fill="#EDE6DA" stroke="#B9AE9C"/><circle cx="14" cy="21" r="4" fill="#fff" stroke="#8D93A0"/><circle cx="30" cy="21" r="4" fill="#fff" stroke="#8D93A0"/>',
@@ -11,6 +15,7 @@ const ICONS = {
   group6: '<rect x="4" y="9" width="36" height="12" rx="2" fill="#EDE6DA" stroke="#B9AE9C"/><g fill="#fff" stroke="#8D93A0"><circle cx="10" cy="5" r="3.5"/><circle cx="22" cy="5" r="3.5"/><circle cx="34" cy="5" r="3.5"/><circle cx="10" cy="25" r="3.5"/><circle cx="22" cy="25" r="3.5"/><circle cx="34" cy="25" r="3.5"/></g>',
   round4: '<circle cx="22" cy="15" r="8" fill="#EDE6DA" stroke="#B9AE9C"/><g fill="#fff" stroke="#8D93A0"><circle cx="22" cy="3.5" r="3"/><circle cx="22" cy="26.5" r="3"/><circle cx="8" cy="15" r="3"/><circle cx="36" cy="15" r="3"/></g>',
   custom: '<rect x="11" y="8" width="22" height="14" rx="2" fill="#EDE6DA" stroke="#B9AE9C"/><g fill="#fff" stroke="#8D93A0"><circle cx="22" cy="4" r="3"/><circle cx="22" cy="26" r="3"/><circle cx="6" cy="15" r="3"/><circle cx="38" cy="15" r="3"/></g>',
+  bench4: '<rect x="10" y="9" width="24" height="11" rx="2" fill="#DDE7E3" stroke="#93ADA3"/><g fill="#fff" stroke="#8D93A0"><circle cx="16" cy="4.5" r="3"/><circle cx="28" cy="4.5" r="3"/><circle cx="16" cy="25" r="3"/><circle cx="28" cy="25" r="3"/></g>',
   bench: '<rect x="3" y="9" width="38" height="11" rx="2" fill="#DDE7E3" stroke="#93ADA3"/><circle cx="12" cy="25" r="3" fill="#fff" stroke="#8D93A0"/><circle cx="32" cy="25" r="3" fill="#fff" stroke="#8D93A0"/>',
   teacher: '<rect x="8" y="5" width="28" height="13" rx="2" fill="#DCE3EE" stroke="#8E9BB2"/><circle cx="22" cy="24" r="4" fill="#8E9BB2"/>',
   board: '<line x1="4" y1="8" x2="40" y2="8" stroke="#2F3A4F" stroke-width="5" stroke-linecap="round"/><text x="22" y="24" font-size="8" text-anchor="middle" fill="#2F3A4F" font-family="Figtree" font-weight="700">FRONT</text>',
@@ -19,7 +24,7 @@ const ICONS = {
 };
 
 function buildPalette() {
-  $('#paletteGrid').innerHTML = PALETTE_ITEMS.map(t => `<button class="pal-item" data-type="${t}"><svg viewBox="0 0 44 30">${ICONS[t]}</svg>${esc(Core.TYPES[t].label)}</button>`).join('');
+  $('#paletteGrid').innerHTML = PALETTE_ITEMS.map(t => `<button class="pal-item" data-type="${t}"><svg viewBox="0 0 44 30">${ICONS[t]}</svg>${esc(palLabel(t))}</button>`).join('');
   $('#presetRow').innerHTML = Object.entries(Sample.PRESETS).map(([k, p]) => `<button class="btn sm" data-preset="${k}">${esc(p.label)}</button>`).join('');
 }
 
@@ -234,13 +239,41 @@ const fstep = room => .25 / (room.scale || .5); // furniture snaps to 0.25 m
 const snapF = (room, v) => r2(Math.round(v / fstep(room)) * fstep(room));
 function makeItem(type, at) {
   const room = activeRoom();
+  const pre = PALETTE_PRESETS[type];
+  if (pre) type = pre.type;
   const it = { id: uid(type), type, x: 0, y: 0, rot: 0 };
   if (type === 'custom') it.sides = { t: 2, b: 2, l: 1, r: 1 };
   if (type === 'bench') { it.lenM = 2.4; it.sides = { t: 3, b: 3 }; }
+  if (pre) { it.lenM = pre.lenM; it.sides = { ...pre.sides }; }
   if (Core.TYPES[type].wall) { it.lenM = Core.TYPES[type].lenM; it.x = at.x; it.y = at.y; snapWallItem(room, it, at); return it; }
   const g = Core.itemGeom(it, room.scale);
   it.x = snapF(room, at.x - g.w / 2); it.y = snapF(room, at.y - g.h / 2);
+  wallSnap(room, it);
   return it;
+}
+/* Furniture snaps to a 0.25 m grid, which can leave a table just short of a wall that isn't on that grid
+   (a wall drawn with snapping off, or a table whose size isn't a multiple of 0.25 m). So when an edge
+   ends up within one grid step of a straight wall it runs alongside, pull it flush against that wall. */
+function wallSnap(room, it) {
+  if (Core.isWall(it)) return;
+  const g = Core.itemGeom(it, room.scale), tol = fstep(room) + 1e-6, B = room.boundary;
+  let bx = 0, by = 0;
+  const nearer = (cur, d) => (Math.abs(d) > 1e-6 && Math.abs(d) <= tol && (!cur || Math.abs(d) < Math.abs(cur)) ? d : cur);
+  B.forEach((a, i) => {
+    const b = B[(i + 1) % B.length];
+    if (Math.abs(a.y - b.y) < 1e-6) {           // horizontal wall alongside the item
+      if (g.x + g.w <= Math.min(a.x, b.x) + 1e-6 || g.x >= Math.max(a.x, b.x) - 1e-6) return;
+      by = nearer(nearer(by, a.y - g.y), a.y - (g.y + g.h));
+    } else if (Math.abs(a.x - b.x) < 1e-6) {    // vertical wall alongside the item
+      if (g.y + g.h <= Math.min(a.y, b.y) + 1e-6 || g.y >= Math.max(a.y, b.y) - 1e-6) return;
+      bx = nearer(nearer(bx, a.x - g.x), a.x - (g.x + g.w));
+    }
+  });
+  for (const [dx, dy] of [[bx, by], [bx, 0], [0, by]]) {
+    if (!dx && !dy) continue;
+    const t = { ...it, x: r2(it.x + dx), y: r2(it.y + dy) };
+    if (!Core.itemProblem(room, t)) { it.x = t.x; it.y = t.y; return; }
+  }
 }
 function snapWallItem(room, it, p) {
   const B = room.boundary;
@@ -268,7 +301,7 @@ function findFreeSpot(room, it, near) {
 function addItemAuto(type) {
   const room = activeRoom();
   const b = roomBBox(room);
-  if (Core.TYPES[type].wall) {
+  if (Core.TYPES[(PALETTE_PRESETS[type] || {}).type || type].wall) {
     const at = type === 'board' ? { x: b.x + b.w / 2, y: b.y - 5 } : type === 'door' ? { x: b.x - 5, y: b.y + b.h * .8 } : { x: b.x + b.w + 5, y: b.y + b.h / 2 };
     const it = makeItem(type, at);
     mutate(() => { room.items.push(it); ui.selItem = it.id; ui.tool = 'select'; });
@@ -277,7 +310,7 @@ function addItemAuto(type) {
   const it = makeItem(type, { x: b.x + b.w / 2, y: b.y + b.h / 2 });
   const spot = findFreeSpot(room, it, ui.view ? { x: ui.view.x + ui.view.w / 2, y: ui.view.y + ui.view.h / 2 } : null);
   if (!spot) { toast('No free space for that. Move or remove something first.'); return null; }
-  it.x = spot.x; it.y = spot.y;
+  it.x = spot.x; it.y = spot.y; wallSnap(room, it);
   mutate(() => { room.items.push(it); ui.selItem = it.id; ui.tool = 'select'; });
   return it;
 }
@@ -294,6 +327,7 @@ function itemAction(act) {
     const t = { ...it, rot: ((it.rot || 0) + 1) % 4 };
     const g1 = Core.itemGeom(t, room.scale);
     t.x = snapF(room, cx - g1.w / 2); t.y = snapF(room, cy - g1.h / 2);
+    wallSnap(room, t);
     let ok = !Core.itemProblem(room, t);
     if (!ok) { const s = findFreeSpot(room, t, { x: cx, y: cy }); if (s && Math.hypot(s.x - t.x, s.y - t.y) < 4) { t.x = s.x; t.y = s.y; ok = true; } }
     if (!ok) return toast("Not enough room to rotate it here. Move it first.");
@@ -465,7 +499,7 @@ svg.addEventListener('pointermove', e => {
     if (!rdrag.moved && Math.hypot(dx, dy) < .35) return;
     rdrag.moved = true;
     if (Core.isWall(it)) snapWallItem(room, it, p);
-    else { it.x = snapF(room, rdrag.ox + dx); it.y = snapF(room, rdrag.oy + dy); }
+    else { it.x = snapF(room, rdrag.ox + dx); it.y = snapF(room, rdrag.oy + dy); wallSnap(room, it); }
     renderRoomSvg();
   } else if (rdrag.kind === 'vertex') {
     const q = snapPt(p, e.shiftKey);
@@ -558,7 +592,7 @@ document.addEventListener('pointermove', e => {
   if (!palDrag) return;
   if (!palDrag.moved && Math.hypot(e.clientX - palDrag.sx, e.clientY - palDrag.sy) < 6) return;
   palDrag.moved = true;
-  if (!palDrag.ghost) { palDrag.ghost = document.createElement('div'); palDrag.ghost.className = 'drag-ghost'; palDrag.ghost.textContent = Core.TYPES[palDrag.type].label; document.body.appendChild(palDrag.ghost); }
+  if (!palDrag.ghost) { palDrag.ghost = document.createElement('div'); palDrag.ghost.className = 'drag-ghost'; palDrag.ghost.textContent = palLabel(palDrag.type); document.body.appendChild(palDrag.ghost); }
   palDrag.ghost.style.left = e.clientX + 'px'; palDrag.ghost.style.top = e.clientY - 28 + 'px';
   if (ui.tool !== 'select') { ui.tool = 'select'; ui.drawPts = null; renderRoomTab(); }
   if (overSvg(e)) { ui.preview = makeItem(palDrag.type, toUnits(e)); ui.preview.id = '__preview'; }

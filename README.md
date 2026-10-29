@@ -80,8 +80,10 @@ browser.
   Absent students are left out of new groups and never picked.
 - **Rooms** (side menu): room layouts are shared by all classes. Draw the walls
   (rectangle, L-shape or your own polygon), then drag furniture on from the
-  palette. Tap a seat to mark it unavailable. Each seat shows its distance
-  from the board.
+  palette (desks, tables of 4 and 6, round tables, custom tables, and lab
+  benches for 4 or 6). Furniture snaps to a 0.25 m grid, and pulls flush
+  against a wall when it's dragged within 0.25 m of one. Tap a seat to mark
+  it unavailable. Each seat shows its distance from the board.
 
 Shortcuts (Rooms): `R` rotates, `Del` deletes, `Ctrl/⌘+D` duplicates (the copy goes
 right beside the table in the same orientation, so repeating it builds a row), and the
