@@ -141,6 +141,8 @@ kbd { font: 11px Figtree, sans-serif; border: 1px solid var(--line-2); border-bo
 .b-seat.off { fill: #E7E5E0; stroke: #B9B6AE; }
 .b-seatnum { font: 600 .32px Figtree, sans-serif; fill: #6B7180; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .b-label { font: 600 .48px Figtree, sans-serif; fill: #6B6253; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.b-box { fill: var(--accent); fill-opacity: .08; stroke: var(--accent); stroke-width: .06; stroke-dasharray: .2 .12; pointer-events: none; }
+#roomSvg.panning { cursor: grab; }
 .b-sel { fill: none; stroke: var(--accent); stroke-width: .08; stroke-dasharray: .25 .15; pointer-events: none; }
 .b-bad { fill: rgba(209,73,91,.12); stroke: var(--danger); stroke-width: .08; pointer-events: none; }
 .b-item { cursor: grab; }

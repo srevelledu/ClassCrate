@@ -17,11 +17,22 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (ui.tool === 'shape' && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); deleteVertex(); return; }
-  if (ui.tool !== 'select' || !ui.selItem) return;
+  if (ui.tool === 'select' && mod && e.key.toLowerCase() === 'a') {
+    // select all the furniture
+    e.preventDefault(); setSel(activeRoom().items.filter(boxable).map(i => i.id)); renderRoomTab(); return;
+  }
+  if (ui.tool !== 'select' || !(ui.selItem || ui.multi.length)) return;
+  if (ui.multi.length && e.key.startsWith('Arrow')) {
+    e.preventDefault();
+    const room = activeRoom(), k = fstep(room);
+    const d = { ArrowLeft: [-k, 0], ArrowRight: [k, 0], ArrowUp: [0, -k], ArrowDown: [0, k] }[e.key];
+    itemAction({ dx: d[0], dy: d[1] });
+    return;
+  }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); itemAction('del'); }
   else if (e.key.toLowerCase() === 'r' && !mod) itemAction('rotate');
   else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); itemAction('dup'); }
-  else if (e.key === 'Escape') { ui.selItem = null; renderRoomTab(); }
+  else if (e.key === 'Escape') { setSel([]); renderRoomTab(); }
   else if (e.key.startsWith('Arrow')) {
     e.preventDefault();
     const room = activeRoom(), it = getItem(room, ui.selItem);

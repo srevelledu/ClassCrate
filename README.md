@@ -101,10 +101,16 @@ browser.
   have no seats and appear, labelled, on printed plans. Furniture snaps to a 0.25 m grid, and pulls flush
   against a wall when it's dragged within 0.25 m of one. Tap a seat to mark
   it unavailable. Each seat shows its distance from the board.
+  Drag across empty floor to select several pieces of furniture at once
+  (`Shift`/`Ctrl`-click adds or removes one); then drag any of them to move
+  the group, or duplicate or delete them together. Pan the view with two
+  fingers, or by holding `Space` (or the right mouse button) and dragging.
 
 Shortcuts (Rooms): `R` rotates, `Del` deletes, `Ctrl/⌘+D` duplicates (the copy goes
 right beside the table in the same orientation, so repeating it builds a row), and the
-arrow keys nudge. `Shift` while drawing walls turns off snapping. Undo and
+arrow keys nudge (all of these except rotate work on a multiple selection
+too), `Ctrl/⌘+A` selects all the furniture, and `Esc` clears the selection.
+`Shift` while drawing walls turns off snapping. Undo and
 redo (`Ctrl/⌘+Z`, `Ctrl/⌘+Shift+Z`) work everywhere.
 
 Data saved by the earlier Seating Planner, Class Toolkit, Classbeat or ClassPost (same browser, same

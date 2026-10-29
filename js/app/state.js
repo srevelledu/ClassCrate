@@ -25,7 +25,7 @@ let data = null;
 const ui = Object.assign({
   tab: 'classes', railOpen: true, tool: 'select', showDist: true, showPrivate: true, snapAngles: true,
 }, readJSON(UI_KEY) || {});
-ui.selItem = null; ui.selVertex = null; ui.drawPts = null; ui.drawHover = null; ui.view = null; ui.viewRoom = null;
+ui.selItem = null; ui.multi = []; ui.box = null; ui.selVertex = null; ui.drawPts = null; ui.drawHover = null; ui.view = null; ui.viewRoom = null;
 ui.grpSel = null; ui.preview = null; ui.ruleSel = new Set(); ui.selStudent = null; ui.result = null; ui.chipFilter = '';
 
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }

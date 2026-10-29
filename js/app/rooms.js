@@ -67,6 +67,26 @@ function toUnits(e) {
   return m ? pt.matrixTransform(m.inverse()) : { x: 0, y: 0 };
 }
 
+/* ----- selection: one item (ui.selItem) or several pieces of furniture (ui.multi) ----- */
+function setSel(ids) {
+  ids = [...new Set(ids)];
+  ui.selItem = ids.length === 1 ? ids[0] : null;
+  ui.multi = ids.length > 1 ? ids : [];
+}
+/* The selected items that still exist (undo can remove them). */
+function selItems(room) {
+  return (ui.selItem ? [ui.selItem] : ui.multi).map(id => getItem(room, id)).filter(Boolean);
+}
+const isSelected = id => id === ui.selItem || ui.multi.includes(id);
+/* Furniture the selection box can pick up: not walls/doors/windows (they belong to a wall) or hidden items. */
+const boxable = it => !Core.isWall(it) && !it.hidden;
+function itemsInBox(room, b) {
+  return room.items.filter(boxable).filter(it => {
+    const g = Core.itemGeom(it, room.scale);
+    return g.x < b.x + b.w && g.x + g.w > b.x && g.y < b.y + b.h && g.y + g.h > b.y;
+  }).map(it => it.id);
+}
+
 function renderRoomTab() {
   const room = activeRoom();
   $('#roomSelect').innerHTML = data.rooms.map(r => `<option value="${r.id}" ${r.id === room.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
@@ -78,7 +98,7 @@ function renderRoomTab() {
   $('#showDist').checked = ui.showDist;
   $$('#toolSeg button').forEach(b => b.classList.toggle('on', b.dataset.tool === ui.tool));
   $('#toolHint').innerHTML = {
-    select: 'Drag to move. Tap a seat to turn it off. <kbd>R</kbd> rotates, <kbd>Del</kbd> removes.',
+    select: 'Drag to move. Drag across empty floor to select several; <kbd>Shift</kbd>-click adds or removes one. Tap a seat to turn it off. <kbd>R</kbd> rotates, <kbd>Del</kbd> removes. Pan with two fingers, or hold <kbd>Space</kbd> and drag.',
     shape: isAxisRect(room.boundary)
       ? 'Drag a corner to resize. Click a wall to add a corner.'
       : 'Drag a corner to move it. Click a wall to add one; <kbd>Del</kbd> removes the selected corner.',
@@ -116,8 +136,16 @@ function renderSelSection(room) {
     el.innerHTML = `<h2>Corner ${ui.selVertex + 1}</h2><div class="btn-row"><button class="btn sm danger" id="delVertex" ${room.boundary.length <= 3 ? 'disabled' : ''}>Delete corner</button></div>`;
     return;
   }
-  const it = ui.selItem && getItem(room, ui.selItem);
-  if (!it || ui.tool !== 'select') { el.innerHTML = ''; return; }
+  const sel = ui.tool === 'select' ? selItems(room) : [];
+  if (sel.length > 1) {
+    el.innerHTML = `<h2>Selected: ${sel.length} items</h2><div class="btn-row">
+      <button class="btn sm" data-act="dup">⧉ Duplicate</button>
+      <button class="btn sm danger" data-act="del">Delete</button></div>
+      <div class="hint">Drag any of them, or use the arrow keys, to move them together. <kbd>Shift</kbd>-click one to add or remove it; <kbd>Esc</kbd> clears the selection.</div>`;
+    return;
+  }
+  const it = sel[0];
+  if (!it) { el.innerHTML = ''; return; }
   const T = Core.TYPES[it.type];
   const g = !Core.isWall(it) ? Core.itemGeom(it, room.scale) : null;
   let h = `<h2>Selected: ${esc(T.label)}</h2><div class="btn-row">
@@ -173,6 +201,7 @@ function renderRoomSvg() {
       h += `<text class="b-walllen" x="${mid.x + n.x * off}" y="${mid.y + n.y * off}">${esc(fmtLen(room, L))}</text>`;
     });
   }
+  if (ui.box) h += `<rect class="b-box" x="${ui.box.x}" y="${ui.box.y}" width="${ui.box.w}" height="${ui.box.h}"/>`;
   if (ui.tool === 'shape') {
     B.forEach((a, i) => { const b = B[(i + 1) % B.length]; h += `<line class="b-wallhit" data-wall="${i}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`; });
     B.forEach((p, i) => { h += `<circle class="b-vertex ${ui.selVertex === i ? 'sel' : ''}" data-vertex="${i}" cx="${p.x}" cy="${p.y}" r=".45"/>`; });
@@ -193,7 +222,7 @@ function renderRoomSvg() {
 }
 
 function builderItem(room, it, seatInfo) {
-  const sel = it.id === ui.selItem && ui.tool === 'select';
+  const sel = isSelected(it.id) && ui.tool === 'select';
   const preview = it === ui.preview;
   const bad = preview ? Core.itemProblem(room, it) : (Core.isWall(it) ? null : Core.itemProblem(room, it));
   const cls = `b-item ${it.hidden ? 'hidden-item' : ''}`;
@@ -216,7 +245,7 @@ function builderItem(room, it, seatInfo) {
       h += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#A9CDE8" stroke-width=".42"/>`;
       h += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#fff" stroke-width=".08"/>`;
     }
-    if (it.id === ui.selItem) h += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="var(--accent)" stroke-width=".9" stroke-opacity=".25" stroke-linecap="round"/>`;
+    if (isSelected(it.id)) h += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="var(--accent)" stroke-width=".9" stroke-opacity=".25" stroke-linecap="round"/>`;
     return h + '</g>';
   }
   const g = Core.itemGeom(it, room.scale);
@@ -324,21 +353,23 @@ function addItemAuto(type) {
   if (Core.TYPES[(PALETTE_PRESETS[type] || {}).type || type].wall) {
     const at = type === 'board' ? { x: b.x + b.w / 2, y: b.y - 5 } : type === 'door' ? { x: b.x - 5, y: b.y + b.h * .8 } : { x: b.x + b.w + 5, y: b.y + b.h / 2 };
     const it = makeItem(type, at);
-    mutate(() => { room.items.push(it); ui.selItem = it.id; ui.tool = 'select'; });
+    mutate(() => { room.items.push(it); setSel([it.id]); ui.tool = 'select'; });
     return it;
   }
   const it = makeItem(type, { x: b.x + b.w / 2, y: b.y + b.h / 2 });
   const spot = findFreeSpot(room, it, ui.view ? { x: ui.view.x + ui.view.w / 2, y: ui.view.y + ui.view.h / 2 } : null);
   if (!spot) { toast('No free space for that. Move or remove something first.'); return null; }
   it.x = spot.x; it.y = spot.y; wallSnap(room, it);
-  mutate(() => { room.items.push(it); ui.selItem = it.id; ui.tool = 'select'; });
+  mutate(() => { room.items.push(it); setSel([it.id]); ui.tool = 'select'; });
   return it;
 }
 function itemAction(act) {
   const room = activeRoom();
-  const it = getItem(room, ui.selItem);
+  const sel = selItems(room);
+  if (sel.length > 1) return groupAction(room, sel, act);
+  const it = sel[0];
   if (!it) return;
-  if (act === 'del') { mutate(() => { room.items = room.items.filter(i => i !== it); ui.selItem = null; }); return; }
+  if (act === 'del') { mutate(() => { room.items = room.items.filter(i => i !== it); setSel([]); }); return; }
   if (act === 'allon') { mutate(() => { it.off = []; }); return; }
   if (act === 'rotate') {
     if (Core.isWall(it)) return;
@@ -357,12 +388,48 @@ function itemAction(act) {
   if (act === 'dup') {
     const copy = JSON.parse(JSON.stringify(it));
     copy.id = uid(it.type);
-    if (Core.isWall(it)) { copy.x += 0; mutate(() => { room.items.push(copy); ui.selItem = copy.id; }); return; }
+    if (Core.isWall(it)) { copy.x += 0; mutate(() => { room.items.push(copy); setSel([copy.id]); }); return; }
     const spot = dupSpot(room, it, copy);
     if (!spot) return toast('No free space to duplicate into.');
     copy.x = spot.x; copy.y = spot.y;
-    mutate(() => { room.items.push(copy); ui.selItem = copy.id; });
+    mutate(() => { room.items.push(copy); setSel([copy.id]); });
   }
+}
+
+/* Delete, duplicate or nudge several items at once. A duplicated group goes alongside the original
+   (right, left, below, above; then with a walkway gap), keeping its layout, or nowhere if none of those fit. */
+function groupAction(room, sel, act) {
+  if (act === 'del') { mutate(() => { room.items = room.items.filter(i => !sel.includes(i)); setSel([]); }); return; }
+  if (act === 'dup') {
+    const gs = sel.map(it => Core.itemGeom(it, room.scale));
+    const x0 = Math.min(...gs.map(g => g.x)), y0 = Math.min(...gs.map(g => g.y));
+    const w = Math.max(...gs.map(g => g.x + g.w)) - x0, h = Math.max(...gs.map(g => g.y + g.h)) - y0;
+    const st = fstep(room), up = v => Math.ceil(v / st - 1e-9) * st, gap = st * 2;
+    const offs = [[up(w), 0], [-up(w), 0], [0, up(h)], [0, -up(h)], [up(w) + gap, 0], [-up(w) - gap, 0], [0, up(h) + gap], [0, -up(h) - gap]];
+    for (const [dx, dy] of offs) {
+      const copies = sel.map(it => ({ ...JSON.parse(JSON.stringify(it)), id: uid(it.type), x: r2(it.x + dx), y: r2(it.y + dy) }));
+      const trial = { ...room, items: room.items.concat(copies) };
+      if (copies.every(c => !Core.itemProblem(trial, c))) {
+        mutate(() => { room.items.push(...copies); setSel(copies.map(c => c.id)); });
+        return;
+      }
+    }
+    return toast('No free space alongside to duplicate them into.');
+  }
+  if (act.dx !== undefined) {
+    if (!moveGroup(room, sel, act.dx, act.dy)) return toast("Can't move them there.");
+    return;
+  }
+  if (act === 'rotate') toast('Select one item to rotate it.');
+}
+/* Move furniture by (dx, dy) together. Refuses (and changes nothing) if a piece would end up outside
+   the walls or overlapping, unless it was already in that state before the move. */
+function moveGroup(room, sel, dx, dy) {
+  const was = new Map(sel.map(it => [it, Core.itemProblem(room, it)]));
+  const trial = { ...room, items: room.items.map(it => (sel.includes(it) ? { ...it, x: r2(it.x + dx), y: r2(it.y + dy) } : it)) };
+  if (trial.items.some((t, i) => sel.includes(room.items[i]) && Core.itemProblem(trial, t) && !was.get(room.items[i]))) return false;
+  mutate(() => { for (const it of sel) { it.x = r2(it.x + dx); it.y = r2(it.y + dy); } });
+  return true;
 }
 
 /* Where a duplicate goes: directly alongside the original in the same orientation, continuing the row
@@ -425,9 +492,10 @@ svg.addEventListener('pointerdown', e => {
   try { svg.setPointerCapture(e.pointerId); } catch { /* ignore */ }
   if (pointers.size === 2) {
     if (rdrag && rdrag.before && rdrag.moved) { data = JSON.parse(rdrag.before); }
+    if (rdrag && rdrag.kind === 'box') { setSel(rdrag.base); ui.box = null; renderRoomTab(); }
     rdrag = null;
     const [a, b] = [...pointers.values()];
-    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), view: { ...ui.view } };
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: { ...ui.view } };
     return;
   }
   const room = activeRoom();
@@ -473,18 +541,37 @@ svg.addEventListener('pointerdown', e => {
     renderRoomTab();
     return;
   }
+  // pan: Space + drag, or the middle or right mouse button
+  if (spaceHeld || (e.pointerType === 'mouse' && e.button !== 0)) {
+    rdrag = { kind: 'pan', sx: e.clientX, sy: e.clientY, view: { ...ui.view } };
+    return;
+  }
   const iEl = t.closest('[data-item]');
   if (iEl && !iEl.closest('[opacity]')) {
     const it = getItem(room, iEl.dataset.item);
     if (!it) return;
-    ui.selItem = it.id;
-    rdrag = { kind: 'item', id: it.id, before: snap(), start: p, ox: it.x, oy: it.y, moved: false, seat: t.closest('[data-seat]')?.dataset.seat };
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      // add it to the selection, or take it out
+      const ids = selItems(room).map(i => i.id);
+      if (!boxable(it) || ids.some(id => !boxable(getItem(room, id)))) setSel([it.id]);
+      else setSel(ids.includes(it.id) ? ids.filter(id => id !== it.id) : ids.concat(it.id));
+      renderRoomTab();
+      return;
+    }
+    const seat = t.closest('[data-seat]')?.dataset.seat;
+    if (ui.multi.includes(it.id)) {
+      const group = selItems(room);
+      rdrag = { kind: 'group', id: it.id, items: group, orig: group.map(g => ({ x: g.x, y: g.y })), before: snap(), start: p, moved: false, seat };
+      return;
+    }
+    setSel([it.id]);
+    rdrag = { kind: 'item', id: it.id, before: snap(), start: p, ox: it.x, oy: it.y, moved: false, seat };
     renderRoomTab();
     return;
   }
-  ui.selItem = null;
-  rdrag = { kind: 'pan', sx: e.clientX, sy: e.clientY, view: { ...ui.view } };
-  renderRoomTab();
+  // empty floor: drag out a selection box (Shift adds to what's already selected)
+  const base = e.shiftKey ? selItems(room).filter(boxable).map(i => i.id) : [];
+  rdrag = { kind: 'box', start: p, base, moved: false };
 });
 svg.addEventListener('pointermove', e => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -495,7 +582,10 @@ svg.addEventListener('pointermove', e => {
     const v = pinch.view;
     const nw = clamp(v.w * f, 6, 300), k = nw / v.w;
     const cx = v.x + v.w / 2, cy = v.y + v.h / 2;
-    ui.view = { x: cx - (cx - v.x) * k, y: cy - (cy - v.y) * k, w: nw, h: v.h * k };
+    // two fingers moving together pan the view
+    const per = nw / (svg.getBoundingClientRect().width || 1);
+    const mx = (a.x + b.x) / 2 - pinch.mid.x, my = (a.y + b.y) / 2 - pinch.mid.y;
+    ui.view = { x: cx - (cx - v.x) * k - mx * per, y: cy - (cy - v.y) * k - my * per, w: nw, h: v.h * k };
     renderRoomSvg();
     return;
   }
@@ -521,6 +611,20 @@ svg.addEventListener('pointermove', e => {
     if (Core.isWall(it)) snapWallItem(room, it, p);
     else { it.x = snapF(room, rdrag.ox + dx); it.y = snapF(room, rdrag.oy + dy); wallSnap(room, it); }
     renderRoomSvg();
+  } else if (rdrag.kind === 'group') {
+    const dx = p.x - rdrag.start.x, dy = p.y - rdrag.start.y;
+    if (!rdrag.moved && Math.hypot(dx, dy) < .35) return;
+    rdrag.moved = true;
+    const st = fstep(room), sx = r2(Math.round(dx / st) * st), sy = r2(Math.round(dy / st) * st);
+    rdrag.items.forEach((it, i) => { it.x = r2(rdrag.orig[i].x + sx); it.y = r2(rdrag.orig[i].y + sy); });
+    renderRoomSvg();
+  } else if (rdrag.kind === 'box') {
+    const s0 = rdrag.start;
+    if (!rdrag.moved && Math.hypot(p.x - s0.x, p.y - s0.y) < .35) return;
+    rdrag.moved = true;
+    ui.box = { x: Math.min(s0.x, p.x), y: Math.min(s0.y, p.y), w: Math.abs(p.x - s0.x), h: Math.abs(p.y - s0.y) };
+    setSel(rdrag.base.concat(itemsInBox(room, ui.box)));
+    renderRoomSvg();
   } else if (rdrag.kind === 'vertex') {
     const q = snapPt(p, e.shiftKey);
     const B = room.boundary, i = rdrag.i, o = rdrag.orig;
@@ -544,6 +648,32 @@ function endRoomPointer(e) {
   if (!rdrag) return;
   const room = activeRoom();
   const d = rdrag; rdrag = null;
+  if (d.kind === 'box') {
+    ui.box = null;
+    if (!d.moved) setSel(d.base);   // a click on empty floor clears the selection (Shift-click keeps it)
+    renderRoomTab();
+    return;
+  }
+  if (d.kind === 'group') {
+    if (!d.moved) {
+      // a click (no drag) on one of a group selects just that item, as a click always does
+      setSel([d.id]);
+      const it = getItem(room, d.id);
+      if (d.seat) { const idx = +d.seat.split(':').pop(); mutate(() => { const off = new Set(it.off || []); off.has(idx) ? off.delete(idx) : off.add(idx); it.off = [...off]; }); }
+      else renderRoomTab();
+      return;
+    }
+    const was = JSON.parse(d.before).rooms.find(r => r.id === room.id);
+    const bad = d.items.find(it => Core.itemProblem(room, it) && !Core.itemProblem(was, getItem(was, it.id)));
+    if (bad) {
+      d.items.forEach((it, i) => { it.x = d.orig[i].x; it.y = d.orig[i].y; });
+      toast(Core.itemProblem(room, bad) === 'outside' ? "Furniture can't go outside the walls." : 'That spot overlaps other furniture.');
+      renderRoomTab();
+      return;
+    }
+    pushUndo(d.before); save(); renderRoomTab();
+    return;
+  }
   if (d.kind === 'item') {
     const it = getItem(room, d.id);
     if (!d.moved) {
@@ -580,6 +710,15 @@ svg.addEventListener('pointerup', endRoomPointer);
 svg.addEventListener('pointercancel', endRoomPointer);
 svg.addEventListener('dblclick', () => { if (ui.tool === 'draw' && ui.drawPts && ui.drawPts.length >= 3) finishPolygon(); });
 svg.addEventListener('wheel', e => { e.preventDefault(); const p = toUnits(e); zoomAt(e.deltaY > 0 ? 1.1 : 1 / 1.1, p.x, p.y); }, { passive: false });
+svg.addEventListener('contextmenu', e => e.preventDefault());   // right-drag pans
+let spaceHeld = false;
+document.addEventListener('keydown', e => {
+  if (e.key !== ' ' || ui.tab !== 'room' || /INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)) return;
+  e.preventDefault();
+  if (!spaceHeld) { spaceHeld = true; svg.classList.add('panning'); }
+});
+document.addEventListener('keyup', e => { if (e.key === ' ') { spaceHeld = false; svg.classList.remove('panning'); } });
+window.addEventListener('blur', () => { spaceHeld = false; svg.classList.remove('panning'); });
 svg.addEventListener('pointerleave', () => { if (ui.tool === 'draw') { ui.drawHover = null; renderRoomSvg(); } });
 
 function pinWallItems(room) {
@@ -630,13 +769,13 @@ document.addEventListener('pointerup', e => {
   pv.id = uid(pv.type);
   const prob = Core.itemProblem(room, pv);
   if (prob) { renderRoomSvg(); return toast(prob === 'outside' ? "Furniture can't go outside the walls." : 'That spot overlaps other furniture.'); }
-  mutate(() => { room.items.push(pv); ui.selItem = pv.id; });
+  mutate(() => { room.items.push(pv); setSel([pv.id]); });
 });
 
 /* ----- room sidebar events ----- */
 function bindRoom() {
   buildPalette();
-  $('#roomSelect').addEventListener('change', e => { data.activeRoomId = e.target.value; ui.selItem = null; ui.selVertex = null; ui.drawPts = null; save(); render(); });
+  $('#roomSelect').addEventListener('change', e => { data.activeRoomId = e.target.value; setSel([]); ui.selVertex = null; ui.drawPts = null; save(); render(); });
   $('#roomName').addEventListener('change', e => { const v = e.target.value.trim(); if (v) mutate(() => { activeRoom().name = v; }); });
   $('#roomNew').addEventListener('click', async () => {
     const name = await askText('New room layout', '', 'e.g. Lab 3');
