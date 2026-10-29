@@ -1,5 +1,6 @@
-/* Sample room + class shown on first load (all names fictional). */
+/* Sample rooms + an example class shown on first load. */
 const Sample = (() => {
+  const SAMPLE_CLASS_NAME = 'Example: Year 10 Science', SAMPLE_TEACHER = 'Example teacher';
   // Grid squares are 0.5 m. Room B12 is 10 m × 9 m; Lab 3 is 13 m × 9 m with a prep-room cut-out.
   const RECT = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 18 }, { x: 0, y: 18 }];
   const PRESETS = {
@@ -50,7 +51,15 @@ const Sample = (() => {
     ];
   }
 
-  const NAMES = ['Olivia Bennett', 'Jack Thompson', 'Charlotte Nguyen', 'Noah Williams', 'Mia Patel', "Liam O'Connor",
+  // The example class is made of famous scientists, so nobody mistakes it for a real class list.
+  // Keep-apart rules are famous rivalries (all historical figures); 'Subrahmanyan Chandrasekhar' tests long labels.
+  const NAMES = ['Marie Curie', 'Isaac Newton', 'Rosalind Franklin', 'Gottfried Leibniz', 'Ada Lovelace', 'Charles Darwin',
+    'Katherine Johnson', 'Nikola Tesla', 'Jane Goodall', 'Thomas Edison', 'Lise Meitner', 'Albert Einstein', 'Dorothy Hodgkin',
+    'Niels Bohr', 'Rachel Carson', 'Galileo Galilei', 'Mae Jemison', 'Alan Turing', 'Grace Hopper', 'Stephen Hawking',
+    'Hypatia of Alexandria', 'Michael Faraday', 'Barbara McClintock', 'Louis Pasteur', 'Subrahmanyan Chandrasekhar', 'Gregor Mendel',
+    'Fiona Wood', 'Ernest Rutherford'];
+  // The names the example class used before (realistic-sounding), so saved copies can be swapped over.
+  const OLD_NAMES = ['Olivia Bennett', 'Jack Thompson', 'Charlotte Nguyen', 'Noah Williams', 'Mia Patel', "Liam O'Connor",
     'Amelia Brown', 'William Chen', 'Isla Robinson', 'Henry Walker', 'Ava Kowalski', 'Lucas Martin', 'Grace Taylor',
     'Thomas Wilson', 'Chloe Anderson', 'Oliver Singh', 'Zoe Mitchell', 'Ethan Clarke', 'Ruby Harris', 'Lachlan McDonald',
     'Sophie Tran', 'Cooper Jones', 'Matilda Evans', 'Archie Kelly', 'Alexandria Papadopoulos-Whitfield', 'Mason Wright', 'Evie Johnson', 'Kai Ngata'];
@@ -58,16 +67,16 @@ const Sample = (() => {
   function classes() {
     const students = NAMES.map((name, i) => ({ id: 'st' + (i + 1), name, front: false, lock: null }));
     const id = n => students.find(s => s.name.startsWith(n)).id;
-    ['Charlotte', 'Henry', 'Matilda', 'Grace'].forEach(n => { students.find(s => s.id === id(n)).front = true; });
-    const apart = [['Jack', 'Noah'], ["Liam", 'Cooper'], ['Mason', 'Archie'], ['Ethan', 'Lachlan', 'Kai'], ['Ruby', 'Zoe'], ['William', 'Oliver']];
+    ['Rosalind', 'Galileo', 'Barbara', 'Dorothy'].forEach(n => { students.find(s => s.id === id(n)).front = true; });
+    const apart = [['Isaac', 'Gottfried'], ['Thomas', 'Nikola'], ['Albert', 'Niels'], ['Alan', 'Michael', 'Hypatia'], ['Louis', 'Gregor'], ['Ernest', 'Lise']];
     const rules = apart.map((g, i) => ({ id: 'ra' + i, type: 'apart', members: g.map(id) }));
-    rules.push({ id: 'rt0', type: 'together', members: [id('Sophie'), id('Chloe')] });
+    rules.push({ id: 'rt0', type: 'together', members: [id('Katherine'), id('Grace')] });
     return [{
-      id: 'class_10sci', name: '10SCI', roomId: 'room_b12', sample: true, teacher: 'Ms Delaney', date: '', roomLabel: '',
+      id: 'class_10sci', name: SAMPLE_CLASS_NAME, roomId: 'room_b12', sample: true, teacher: SAMPLE_TEACHER, date: '', roomLabel: '',
       students, rules, adjacency: 'adjacent', fill: 'front', perspective: 'teacher', palette: 'pastel',
       plan: { assign: {} },
     }];
   }
-  return { rooms, classes, PRESETS };
+  return { rooms, classes, PRESETS, NAMES, OLD_NAMES, CLASS_NAME: SAMPLE_CLASS_NAME, TEACHER: SAMPLE_TEACHER };
 })();
 if (typeof module !== 'undefined') module.exports = Sample;

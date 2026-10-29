@@ -121,7 +121,7 @@
       <div class="section">
         <h2>Class details</h2>
         <label class="field"><span>Class name</span><input class="input" id="className" placeholder="e.g. 10PHYS"></label>
-        <label class="field"><span>Teacher</span><input class="input" id="classTeacher" placeholder="e.g. Ms Delaney"></label>
+        <label class="field"><span>Teacher</span><input class="input" id="classTeacher" placeholder="e.g. your name"></label>
         <div class="field"><span>Colour &amp; icon</span><div class="row"><span id="classIconPreview"></span><span class="grow small" id="classIconName"></span><button class="btn sm" id="classIconBtn">Change</button></div></div>
         <label class="field"><span>Room for seating plans</span><select class="input" id="classRoom"></select></label>
         <div class="btn-row"><button class="btn sm danger" id="classDel">Delete class</button></div>
@@ -134,11 +134,12 @@
       <div class="section" id="classSummary"></div>
     </aside>
     <div class="content">
+      <div class="msg sample-note" id="sampleNote" hidden>This is an <b>example class</b> so you can try ClassCrate out. The students are famous scientists, not real people. Delete it from its ⋮ menu on the Classes page once you’ve made your own class, or use <b>Backup &amp; data → Clear sample data</b>.</div>
       <div class="cols">
         <div class="card">
           <h3>Students</h3>
           <label class="field"><span>Paste names, one per line (e.g. a column copied from a spreadsheet)</span>
-            <textarea class="input" id="pasteNames" rows="4" placeholder="Olivia Bennett&#10;Jack Thompson&#10;…"></textarea></label>
+            <textarea class="input" id="pasteNames" rows="4" placeholder="Marie Curie&#10;Isaac Newton&#10;…"></textarea></label>
           <div class="btn-row">
             <button class="btn primary sm" id="addNames">Add to class</button>
             <button class="btn sm" id="csvBtn" title="Import a class list exported from your school system or a spreadsheet">Import CSV…</button>

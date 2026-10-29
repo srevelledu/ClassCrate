@@ -81,7 +81,7 @@ test('Keep-together rule is honoured (same table)', () => {
 test('Locked seats are respected', () => {
   const students = cls.students.map(s => ({ ...s }));
   students[0].lock = avail[avail.length - 1].key;
-  students[1].lock = avail[0].key; // Jack (has a keep-apart with Noah)
+  students[1].lock = avail[0].key; // Isaac (has a keep-apart with Gottfried)
   for (let seed = 1; seed <= 50; seed++) {
     const res = Core.solve({ seats, students, rules: apartRules, seed, label });
     assert.ok(res.ok);
@@ -93,11 +93,11 @@ test('Locked seats are respected', () => {
 
 test('Impossible: two keep-apart students locked to the same table → clear message', () => {
   const students = cls.students.map(s => ({ ...s }));
-  const jack = students.find(s => s.name.startsWith('Jack')), noah = students.find(s => s.name.startsWith('Noah'));
-  jack.lock = 'b12_t1:0'; noah.lock = 'b12_t1:1';
+  const isaac = students.find(s => s.name.startsWith('Isaac')), gottfried = students.find(s => s.name.startsWith('Gottfried'));
+  isaac.lock = 'b12_t1:0'; gottfried.lock = 'b12_t1:1';
   const res = Core.solve({ seats, students, rules: apartRules, seed: 1, label });
   assert.equal(res.ok, false);
-  assert.match(res.problems.join(' '), /Jack Thompson and Noah Williams are both locked/);
+  assert.match(res.problems.join(' '), /Isaac Newton and Gottfried Leibniz are both locked/);
   assert.ok(res.brokenRules.includes(apartRules[0].id));
   console.log('    → ' + res.problems[0]);
 });

@@ -51,6 +51,20 @@ function init() {
       data.version = 3;
       save();
     }
+    if (data.version < 4) {
+      // v4: the example class switches from realistic-sounding names to famous scientists, so it can't be
+      // mistaken for a real class list. Only an untouched copy (every name still the original) is swapped.
+      const ex = data.classes.find(c => c.sample && c.id === 'class_10sci');
+      if (ex && ex.students.length === Sample.OLD_NAMES.length && ex.students.every((s, i) => s.name === Sample.OLD_NAMES[i])) {
+        const fresh = Sample.classes()[0];
+        ex.students.forEach((s, i) => { s.name = fresh.students[i].name; s.front = fresh.students[i].front; });
+        ex.rules = fresh.rules;
+        if (ex.name === '10SCI') ex.name = fresh.name;
+        if (ex.teacher === 'Ms Delaney') ex.teacher = fresh.teacher;
+      }
+      data.version = 4;
+      save();
+    }
   } else {
     data = freshData();
     // pre-generate the sample so the plan tab shows something straight away

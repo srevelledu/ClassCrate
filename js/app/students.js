@@ -12,6 +12,7 @@ function parseNames(text) {
 }
 function renderStudentsTab() {
   const cls = activeClass();
+  $('#sampleNote').hidden = !cls.sample;
   if (document.activeElement !== $('#className')) $('#className').value = cls.name;
   if (document.activeElement !== $('#classTeacher')) $('#classTeacher').value = cls.teacher || '';
   $('#classRoom').innerHTML = data.rooms.map(r => `<option value="${r.id}" ${r.id === cls.roomId ? 'selected' : ''}>${esc(r.name)}</option>`).join('');

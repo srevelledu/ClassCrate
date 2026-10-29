@@ -74,7 +74,7 @@ function renderCrumb() {
   const el = $('#crumb');
   if (CLASS_TABS.includes(ui.tab)) {
     const cls = activeClass(), ic = SubjectIcons.get(classIconId(cls)), th = classTheme(cls);
-    el.innerHTML = `<span class="crumb-sep">›</span><span class="crumb-class"><span class="mini-ico" style="background:${th.color};color:${th.ink}">${SubjectIcons.svg(ic.id)}</span><span class="crumb-name">${esc(cls.name)}</span></span>`;
+    el.innerHTML = `<span class="crumb-sep">›</span><span class="crumb-class"><span class="mini-ico" style="background:${th.color};color:${th.ink}">${SubjectIcons.svg(ic.id)}</span><span class="crumb-name">${esc(cls.name)}</span>${cls.sample ? '<span class="sample-tag">Example</span>' : ''}</span>`;
   } else if (ui.tab === 'room') el.innerHTML = '<span class="crumb-sep">›</span><span class="crumb-name">Rooms</span>';
   else el.innerHTML = '';
 }
@@ -104,7 +104,7 @@ function renderClassesHome() {
       <span class="cc-pin" aria-hidden="true"></span>
       <span class="cc-icon">${SubjectIcons.svg(ic.id)}</span>
       <button class="cc-menu" data-menu="${c.id}" aria-label="Options for ${esc(c.name)}">${UI_ICON.dots}</button>
-      <div class="cc-text"><h3 class="cc-title">${esc(c.name)}</h3><div class="cc-sub">${meta}</div></div>
+      <div class="cc-text">${c.sample ? '<span class="sample-tag">Example · made-up names</span>' : ''}<h3 class="cc-title">${esc(c.name)}</h3><div class="cc-sub">${meta}</div></div>
     </article>`;
   }).join('');
 }

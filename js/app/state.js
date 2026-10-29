@@ -67,7 +67,7 @@ function normClass(c) {
   return out;
 }
 function freshData() {
-  return { version: 3, rooms: Sample.rooms().map(normRoom), classes: Sample.classes().map(normClass), activeRoomId: 'room_b12', activeClassId: 'class_10sci' };
+  return { version: 4, rooms: Sample.rooms().map(normRoom), classes: Sample.classes().map(normClass), activeRoomId: 'room_b12', activeClassId: 'class_10sci' };
 }
 function fixRefs() {
   for (const c of data.classes) if (!c.color) c.color = pickSeatColour();
