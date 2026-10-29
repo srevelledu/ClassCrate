@@ -1,6 +1,6 @@
-/* Sample rooms + an example class shown on first load. */
+/* Sample rooms + a demo class shown on first load. */
 const Sample = (() => {
-  const SAMPLE_CLASS_NAME = 'Example: Year 10 Science', SAMPLE_TEACHER = 'Example teacher';
+  const SAMPLE_CLASS_NAME = 'Year 10 Science', SAMPLE_TEACHER = '';
   // Grid squares are 0.5 m. Room B12 is 10 m × 9 m; Lab 3 is 13 m × 9 m with a prep-room cut-out.
   const RECT = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 18 }, { x: 0, y: 18 }];
   const PRESETS = {
@@ -51,14 +51,14 @@ const Sample = (() => {
     ];
   }
 
-  // The example class is made of famous scientists, so nobody mistakes it for a real class list.
+  // The demo class is made of famous scientists, so nobody mistakes it for a real class list.
   // Keep-apart rules are famous rivalries (all historical figures); 'Subrahmanyan Chandrasekhar' tests long labels.
   const NAMES = ['Marie Curie', 'Isaac Newton', 'Rosalind Franklin', 'Gottfried Leibniz', 'Ada Lovelace', 'Charles Darwin',
     'Katherine Johnson', 'Nikola Tesla', 'Jane Goodall', 'Thomas Edison', 'Lise Meitner', 'Albert Einstein', 'Dorothy Hodgkin',
     'Niels Bohr', 'Rachel Carson', 'Galileo Galilei', 'Mae Jemison', 'Alan Turing', 'Grace Hopper', 'Stephen Hawking',
     'Hypatia of Alexandria', 'Michael Faraday', 'Barbara McClintock', 'Louis Pasteur', 'Subrahmanyan Chandrasekhar', 'Gregor Mendel',
     'Fiona Wood', 'Ernest Rutherford'];
-  // The names the example class used before (realistic-sounding), so saved copies can be swapped over.
+  // The names the demo class used before (realistic-sounding), so saved copies can be swapped over.
   const OLD_NAMES = ['Olivia Bennett', 'Jack Thompson', 'Charlotte Nguyen', 'Noah Williams', 'Mia Patel', "Liam O'Connor",
     'Amelia Brown', 'William Chen', 'Isla Robinson', 'Henry Walker', 'Ava Kowalski', 'Lucas Martin', 'Grace Taylor',
     'Thomas Wilson', 'Chloe Anderson', 'Oliver Singh', 'Zoe Mitchell', 'Ethan Clarke', 'Ruby Harris', 'Lachlan McDonald',

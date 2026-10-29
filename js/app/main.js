@@ -52,17 +52,23 @@ function init() {
       save();
     }
     if (data.version < 4) {
-      // v4: the example class switches from realistic-sounding names to famous scientists, so it can't be
+      // v4: the demo class switches from realistic-sounding names to famous scientists, so it can't be
       // mistaken for a real class list. Only an untouched copy (every name still the original) is swapped.
       const ex = data.classes.find(c => c.sample && c.id === 'class_10sci');
       if (ex && ex.students.length === Sample.OLD_NAMES.length && ex.students.every((s, i) => s.name === Sample.OLD_NAMES[i])) {
         const fresh = Sample.classes()[0];
         ex.students.forEach((s, i) => { s.name = fresh.students[i].name; s.front = fresh.students[i].front; });
         ex.rules = fresh.rules;
-        if (ex.name === '10SCI') ex.name = fresh.name;
-        if (ex.teacher === 'Ms Delaney') ex.teacher = fresh.teacher;
       }
       data.version = 4;
+      save();
+    }
+    if (data.version < 5) {
+      // v5: the demo class keeps a plain name ("Year 10 Science") and no teacher; just a grey Demo label marks it
+      const ex = data.classes.find(c => c.sample && c.id === 'class_10sci');
+      if (ex && ['10SCI', 'Example: Year 10 Science'].includes(ex.name)) ex.name = Sample.CLASS_NAME;
+      if (ex && ['Ms Delaney', 'Example teacher'].includes(ex.teacher)) ex.teacher = Sample.TEACHER;
+      data.version = 5;
       save();
     }
   } else {

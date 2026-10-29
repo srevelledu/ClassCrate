@@ -9,11 +9,10 @@ It's live at **https://classcrate.au**, published from this repository's
 `main` branch with GitHub Pages (the `CNAME` file holds the domain). You can
 also serve it from any static host, or open `index.html` straight from disk.
 
-**Example class:** a first visit opens with "Example: Year 10 Science", whose
+**Demo class:** a first visit opens with a demo "Year 10 Science" class whose
 students are famous scientists (Marie Curie, Isaac Newton, Ada Lovelace…), so
-it can't be mistaken for a real class list. It is labelled **Example** on its
-card and in the class, and can be deleted from its ⋮ menu or with
-**Backup & data → Clear sample data**.
+it can't be mistaken for a real class list. A grey **Demo** label marks it; delete
+it from its ⋮ menu or with **Backup & data → Clear sample data**.
 
 **Privacy:** class lists, rules, plans and groups are stored only in this
 browser's `localStorage`. The only network requests are to Google Fonts (Figtree
@@ -99,7 +98,7 @@ made by either load with **Import…**.
   css/app.css         all styles
   js/core.js          seating solver and room geometry (no DOM)
   js/tools.js         group maker, picker and CSV parsing (no DOM)
-  js/sample.js        the example class (famous scientists) and sample rooms
+  js/sample.js        the demo class (famous scientists) and sample rooms
   js/icons.js         the 50 subject icons
   js/app/state.js     data, saving, undo/redo, dialogs, top-level render
   js/app/home.js      Classes page, side menu, new-class dialog, menus
