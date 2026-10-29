@@ -1,7 +1,7 @@
 'use strict';
 /* =================================================================
    9. GETTING-STARTED GUIDE
-   A three-step checklist on the Classes page: create a class, add students, build your room. Each
+   A three-step checklist on the Classes page: create a class, add students, draw your room. Each
    step's button takes you to the right place and points at what to use. Steps tick themselves off
    as they're done. Once all three are done (or the guide is hidden) it moves out of the way, to a
    "Getting started" link at the bottom of the side menu, which brings it back.
@@ -16,7 +16,7 @@ function guideSteps() {
     { done: mine.length > 0, title: 'Create your class', text: 'Give it a name and a colour. You can copy students and rules from a class you already have.', action: 'Create a class', go: () => newClass() },
     { done: !!withStudents, title: 'Add your students', text: 'Paste names, or import a CSV class list.', action: 'Add students',
       go: () => { openClass(target().id, 'students'); spotlight('#csvBtn', 'Import a CSV class list here, or paste names into the box above and press Add to class.'); } },
-    { done: !!ui.guide.room || data.rooms.some(r => !r.sample), title: 'Build your room', text: 'Draw your classroom’s walls and drag in the desks and tables, so seating plans match the real room.', action: 'Build your room',
+    { done: !!ui.guide.room || data.rooms.some(r => !r.sample), title: 'Draw your room', text: 'Draw your classroom’s walls and drag in the desks and tables, so seating plans match the real room.', action: 'Draw your room',
       go: () => { setTab('room'); spotlight('#roomNew', 'Start a new room here, then draw the walls and drag furniture in from the palette. Choose it for your class on the Students tab.'); } },
   ];
 }
