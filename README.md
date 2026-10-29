@@ -5,8 +5,9 @@
 Classroom tools for teachers, organised by class: pick a class, then use its
 **seating plan**, **groups**, **random picker**, **lesson timer**, **noise
 meter** or **home learning** tracker. Everything runs in the browser with no build step and no server.
-Serve this repository from any static host (for example GitHub Pages), or
-open `index.html` straight from disk.
+It's live at **https://classcrate.au**, published from this repository's
+`main` branch with GitHub Pages (the `CNAME` file holds the domain). You can
+also serve it from any static host, or open `index.html` straight from disk.
 
 **Privacy:** class lists, rules, plans and groups are stored only in this
 browser's `localStorage`. The only network requests are to Google Fonts (Figtree
