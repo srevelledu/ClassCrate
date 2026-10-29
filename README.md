@@ -78,8 +78,10 @@ browser.
   ⋮ menu copies who hasn't handed it in, or marks everyone else as in.
 - **Display mode** (screen icon, top right, inside a class): for the
   projector. It hides the menus and editing controls, makes names, the picker,
-  timer and groups much larger, and goes full screen. `Esc` or **Exit display
-  mode** leaves it.
+  timer and groups much larger, and goes full screen. Nothing confidential is
+  projected: the seating plan drops its front-priority, locked-seat and
+  rule markers, groups don't flag rule clashes, and the Students and Home
+  learning tabs are hidden. `Esc` or **Exit display mode** leaves it.
 - **Here today**: on Groups and Random picker, tap a name to mark them absent.
   Absent students are left out of new groups and never picked.
 - **Rooms** (side menu): room layouts are shared by all classes. Draw the walls

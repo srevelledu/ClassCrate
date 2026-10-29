@@ -581,7 +581,8 @@ body.present .gcard-head .grow { font-size: 26px; }
 body.present .gnum { width: 40px; height: 40px; font-size: 20px; }
 body.present .gname { font-size: 24px; padding: 10px 14px; }
 body.present .gname .av { width: 40px; height: 40px; font-size: 18px; }
-body.present .hl-table { font-size: 17px; }
+body.present .tab[data-tab="students"], body.present .tab[data-tab="homework"] { display: none; }
+body.present .gname.bad { background: var(--bg); border-color: transparent; }
 .present-exit { position: fixed; right: 20px; bottom: 20px; z-index: 800; border: 0; border-radius: 999px; padding: 10px 16px; background: var(--brand-navy); color: #fff; font: 600 14px/1 var(--font); box-shadow: 0 8px 24px rgba(0,0,0,.25); cursor: pointer; opacity: .55; transition: opacity .15s; }
 .present-exit:hover, .present-exit:focus-visible { opacity: 1; }
 .present-exit kbd { background: rgba(255,255,255,.15); color: #fff; border-color: transparent; margin-left: 6px; }

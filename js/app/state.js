@@ -197,6 +197,7 @@ function render() {
   if (activeTab && !$('#classTabs').hidden) { const r = activeTab.getBoundingClientRect(), box = $('#classTabs').getBoundingClientRect(); if (r.left < box.left || r.right > box.right) $('#classTabs').scrollLeft += r.left - box.left - 16; }
   $('#presentBtn').hidden = !CLASS_TABS.includes(ui.tab);
   if (ui.present && !CLASS_TABS.includes(ui.tab)) setPresent(false);
+  if (ui.present && PRIVATE_TABS.includes(ui.tab)) ui.tab = 'plan'; // rules and home learning stay off the projector
   if (ui.tab !== 'noise' && pit.on) stopNoise(); // the microphone is only ever on while the noise meter is showing
   checkGuide();
   renderCrumb();

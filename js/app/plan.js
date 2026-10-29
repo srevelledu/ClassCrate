@@ -87,7 +87,7 @@ function renderPlanTab() {
         ${seat ? '<button class="btn sm" data-selact="unseat">Unseat</button>' : ''}
       </div></div>`;
   } else $('#selStudent').innerHTML = '';
-  $('#planPage').innerHTML = room ? buildPlanSVG(cls, room, { priv: ui.showPrivate, interactive: true, viol }) : '';
+  $('#planPage').innerHTML = room ? buildPlanSVG(cls, room, { priv: ui.showPrivate && !ui.present, interactive: true, viol }) : '';
 }
 
 /* ---------- text measuring for auto-fit ---------- */
@@ -573,8 +573,7 @@ function buildPlanSVG(cls, room, opts) {
     const lx = 56 + measure(foot, 400, 11.5) + 40;
     h += `<g transform="translate(${lx} ${PAGE_H - 26})"><circle cx="0" cy="0" r="6.5" fill="#F6C343"/><path d="${starPath(0, 0, 4)}" fill="#fff"/><text x="11" y="4" font-size="11" fill="${pal.ink2}">Front priority</text>
       <circle cx="108" cy="0" r="6.5" fill="${pal.accent}"/>${lockGlyph(108, 0)}<text x="119" y="4" font-size="11" fill="${pal.ink2}">Locked seat</text>
-      <circle cx="210" cy="0" r="6.5" fill="#D1495B"/><text x="210" y="3.6" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">!</text><text x="221" y="4" font-size="11" fill="${pal.ink2}">Breaks a rule</text>
-      <text x="312" y="4" font-size="11" fill="${pal.ink2}" font-style="italic">Editing markers: never printed</text></g>`;
+      <circle cx="210" cy="0" r="6.5" fill="#D1495B"/><text x="210" y="3.6" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">!</text><text x="221" y="4" font-size="11" fill="${pal.ink2}">Breaks a rule</text></g>`;
   }
   h += `<text x="${PAGE_W - 56}" y="${PAGE_H - 22}" font-size="11.5" text-anchor="end" fill="${pal.ink2}">${cls.students.length} students · ${nSeated} seated · ${nAvail} seats</text>`;
   return h + '</svg>';
