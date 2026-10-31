@@ -28,18 +28,33 @@ function hlTaskCount(cls, t) {
   return { inn, of: ids.length - excused };
 }
 
-function renderHomeLearningTab() {
-  const cls = activeClass(), tasks = cls.homework;
-  if (document.activeElement !== $('#hlDue') && !$('#hlDue').value) $('#hlDue').value = addDays(isoDate(), 7);
-  // tasks, newest due date first
-  const order = tasks.slice().sort((a, b) => (b.due || '').localeCompare(a.due || '') || b.created - a.created);
+/* Tasks, newest due date first. */
+const hlOrder = cls => cls.homework.slice().sort((a, b) => (b.due || '').localeCompare(a.due || '') || b.created - a.created);
+function hlCellAttrs(cls, t, s) {
+  const st = hlStatus(t, s.id);
+  return { cls: `hl-cell hl-${st || 'none'}`, mark: HL_MARK[st], title: `${s.name}: ${HL_LABEL[st]} (tap to change)`, label: `${s.name}, ${t.title}: ${HL_LABEL[st]}` };
+}
+function hlRateCell(cls, s) {
+  const r = hlStudentRate(cls, s.id), pct = r.due ? Math.round(100 * r.inn / r.due) : null;
+  return `<td class="hl-rate ${pct !== null && pct < 70 ? 'low' : ''}">${pct === null ? '—' : `${r.inn}/${r.due}<span class="hl-bar"><i style="width:${pct}%"></i></span>`}</td>`;
+}
+function renderHlTaskList(cls, order) {
   $('#hlTaskList').innerHTML = order.length ? order.map(t => {
     const c = hlTaskCount(cls, t), missing = pastDue(t) ? cls.students.filter(s => hlStatus(t, s.id) === 'missing').length : 0;
     return `<div class="set-row"><div class="grow"><b>${esc(t.title)}</b><div class="hint">Due ${esc(shortDate(t.due)) || '—'} · ${c.inn}/${c.of} in${missing ? ` · <span class="hl-miss-text">${missing} missing</span>` : ''}</div></div>
       <button class="btn sm ghost icon" data-hl-menu="${t.id}" aria-label="Options for ${esc(t.title)}">${UI_ICON.dots}</button></div>`;
   }).join('') : '<div class="hint">No tasks yet.</div>';
+}
+
+function renderHomeLearningTab() {
+  const cls = activeClass(), tasks = cls.homework;
+  if (document.activeElement !== $('#hlDue') && !$('#hlDue').value) $('#hlDue').value = addDays(isoDate(), 7);
+  const order = hlOrder(cls);
+  renderHlTaskList(cls, order);
 
   const grid = $('#hlGrid');
+  // a redraw (undo, marking everyone in...) keeps the grid scrolled to where it was
+  const old = grid.querySelector('.hl-scroll'), keep = old && { top: old.scrollTop, left: old.scrollLeft };
   if (!cls.students.length) { grid.innerHTML = '<div class="empty">Add students on the Students tab first.</div>'; return; }
   if (!tasks.length) { grid.innerHTML = '<div class="empty">No home learning yet. Add a task on the left, then tap each student’s box as their work comes in.</div>'; return; }
   const head = order.map(t => {
@@ -47,16 +62,27 @@ function renderHomeLearningTab() {
     return `<th class="hl-th ${pastDue(t) ? 'past' : ''}" scope="col"><button class="hl-head" data-hl-menu="${t.id}"><b>${esc(t.title)}</b><span>Due ${esc(shortDate(t.due))}</span><span class="hl-count">${c.inn}/${c.of}</span></button></th>`;
   }).join('');
   const rows = cls.students.map(s => {
-    const r = hlStudentRate(cls, s.id), pct = r.due ? Math.round(100 * r.inn / r.due) : null;
     const cells = order.map(t => {
-      const st = hlStatus(t, s.id);
-      return `<td><button class="hl-cell hl-${st || 'none'}" data-hl="${t.id}|${s.id}" title="${esc(s.name)}: ${HL_LABEL[st]} (tap to change)" aria-label="${esc(s.name)}, ${esc(t.title)}: ${HL_LABEL[st]}">${HL_MARK[st]}</button></td>`;
+      const a = hlCellAttrs(cls, t, s);
+      return `<td><button class="${a.cls}" data-hl="${t.id}|${s.id}" title="${esc(a.title)}" aria-label="${esc(a.label)}">${a.mark}</button></td>`;
     }).join('');
-    return `<tr><th scope="row" class="hl-name">${avatar(s.name)}<span>${esc(s.name)}</span></th>${cells}
-      <td class="hl-rate ${pct !== null && pct < 70 ? 'low' : ''}">${pct === null ? '—' : `${r.inn}/${r.due}<span class="hl-bar"><i style="width:${pct}%"></i></span>`}</td></tr>`;
+    return `<tr><th scope="row" class="hl-name">${avatar(s.name)}<span>${esc(s.name)}</span></th>${cells}${hlRateCell(cls, s)}</tr>`;
   }).join('');
   grid.innerHTML = `<div class="hl-legend">${['done', 'late', 'excused', 'missing'].map(k => `<span><i class="hl-cell hl-${k}">${HL_MARK[k]}</i>${HL_LABEL[k]}</span>`).join('')}<span class="hint">Tap a box to change it.</span></div>
     <div class="hl-scroll"><table class="hl-table"><thead><tr><th class="hl-name" scope="col">Student</th>${head}<th class="hl-rate" scope="col">Handed in</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  if (keep) { const sc = grid.querySelector('.hl-scroll'); sc.scrollTop = keep.top; sc.scrollLeft = keep.left; }
+}
+/* After one box changes: update that box, the student's total, the task's count and the task list in
+   place, so the grid isn't redrawn and nothing scrolls. */
+function updateHlCell(btn, t, sid) {
+  const cls = activeClass(), s = cls.students.find(x => x.id === sid);
+  const a = hlCellAttrs(cls, t, s);
+  btn.className = a.cls; btn.textContent = a.mark; btn.title = a.title; btn.setAttribute('aria-label', a.label);
+  const rate = btn.closest('tr').querySelector('td.hl-rate');
+  if (rate) rate.outerHTML = hlRateCell(cls, s);
+  const c = hlTaskCount(cls, t), count = document.querySelector(`.hl-head[data-hl-menu="${t.id}"] .hl-count`);
+  if (count) count.textContent = `${c.inn}/${c.of}`;
+  renderHlTaskList(cls, hlOrder(cls));
 }
 
 /* A small form dialog (title + fields) resolving to the entered values, or null on cancel. */
@@ -115,13 +141,12 @@ function bindHomeLearning() {
     const c = e.target.closest('[data-hl]');
     if (!c) return;
     const [tid, sid] = c.dataset.hl.split('|');
+    const t = activeClass().homework.find(x => x.id === tid);
+    if (!t) return;
     mutate(() => {
-      const t = activeClass().homework.find(x => x.id === tid);
       const next = HL_STATES[(HL_STATES.indexOf(t.subs[sid] || '') + 1) % HL_STATES.length];
       if (next) t.subs[sid] = next; else delete t.subs[sid];
     }, { noRender: true });
-    renderHomeLearningTab();
-    const again = document.querySelector(`[data-hl="${tid}|${sid}"]`);
-    if (again) again.focus(); // keep keyboard focus on the box just changed
+    updateHlCell(c, t, sid);   // the box keeps its place and keyboard focus
   });
 }
