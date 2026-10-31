@@ -16,7 +16,9 @@ it from its ⋮ menu or with **Backup & data → Clear sample data**.
 
 **Privacy:** class lists, rules, plans and groups are stored only in this
 browser's `localStorage`. The only network requests are to Google Fonts (Figtree
-and Poppins), which carry no student data. Use **☰ Data → Export backup** to
+and Poppins) and Cloudflare Web Analytics, which counts visits anonymously (no
+cookies) so we can see how many teachers use ClassCrate. Neither carries any
+student data. Use **☰ Data → Export backup** to
 save a JSON file and **Import…** to load it on another computer. Import can
 merge with what's already there or replace it. The noise meter listens to the
 microphone only while its tab is open and switched on, and the sound never leaves the
