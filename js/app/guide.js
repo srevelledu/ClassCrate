@@ -11,6 +11,8 @@
 ================================================================= */
 ui.guide = Object.assign({ hidden: false, room: false, done: false }, ui.guide);
 ui.guide.toured = Object.assign({ class: false, students: false, room: false }, ui.guide.toured);
+// tours finished to the end (Done pressed on the last tip): each one ticks off its step
+ui.guide.finished = Object.assign({ class: false, students: false, room: !!ui.guide.room }, ui.guide.finished);
 const guideOver = () => !!ui.guide.done;
 /* Start a tour by itself the first time its part of the app is opened, while the guide is still running. */
 function autoTour(name, arg) {
@@ -23,9 +25,9 @@ function guideSteps() {
   const withStudents = mine.find(c => c.students.length);
   const target = () => withStudents || mine[mine.length - 1] || activeClass();
   return [
-    { done: mine.length > 0, title: 'Create your class', text: 'Give it a name and a colour. You can copy students and rules from a class you already have.', action: 'Create a class', go: () => startTour('class') },
-    { done: !!withStudents, title: 'Add your students', text: 'Paste names, or import a CSV class list.', action: 'Add students', go: () => startTour('students', target()) },
-    { done: !!ui.guide.room || data.rooms.some(r => !r.sample), title: 'Draw your room', text: 'Draw your classroom’s walls and drag in the desks and tables, so seating plans match the real room.', action: 'Draw your room', go: () => startTour('room') },
+    { done: ui.guide.finished.class || mine.length > 0, title: 'Create your class', text: 'Give it a name and a colour. You can copy students and rules from a class you already have.', action: 'Create a class', go: () => startTour('class') },
+    { done: ui.guide.finished.students || !!withStudents, title: 'Add your students', text: 'Paste names, or import a CSV class list.', action: 'Add students', go: () => startTour('students', target()) },
+    { done: ui.guide.finished.room || data.rooms.some(r => !r.sample), title: 'Draw your room', text: 'Draw your classroom’s walls and drag in the desks and tables, so seating plans match the real room.', action: 'Draw your room', go: () => startTour('room') },
   ];
 }
 function renderGuide() {
@@ -86,8 +88,6 @@ const TOURS = {
       { sel: '#roomStatus', text: 'This shows how many seats the room has, and warns you about anything outside the walls or overlapping.' },
       { sel: '#railClasses', text: 'Last step: open your class and choose this room on its Students page. Then press Generate on the Seating plan.' },
     ],
-    // pressing Done on the last tip ticks off "Draw your room", even if you set up the sample room rather than a new one
-    done: () => { ui.guide.room = true; saveUI(); render(); },
   }; },
 };
 let tour = null;
@@ -122,9 +122,9 @@ function tourGo(dir) {
   }
   if (i < 0) { if (t.i >= 0) showTourStep(); return; }   // nothing earlier to go back to
   if (i >= t.steps.length) {                             // finished
-    const then = t.then, before = t.classesBefore, done = t.done;
+    const then = t.then, before = t.classesBefore;
     endTour();
-    if (done) done();
+    ui.guide.finished[t.name] = true; saveUI(); render(); // pressing Done ticks off the tour's step
     if (then) then(before);
     return;
   }
