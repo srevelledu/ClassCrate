@@ -236,6 +236,9 @@ const Tools = (() => {
     if (HEAD.full.test(t)) return 'full';
     return null;
   }
+  /* A cell that is itself a column heading ("Name", "Student name", "Surname"), e.g. a repeated heading
+     row or one we didn't spot, is never a student. */
+  const isHeading = v => { const t = normHead(v); return !!headRole(v) || /\bnames?\b/.test(t); };
   /* What a cell holding a name looks like: letters, spaces, hyphens, apostrophes and full stops only. */
   const NAME_RE = /^[\p{L}][\p{L}\p{M}'’\-. ]*$/u;
   const isNameLike = v => v.length >= 2 && v.length <= 60 && NAME_RE.test(v);
@@ -264,6 +267,10 @@ const Tools = (() => {
      name then surname, which the import screen can swap). "Surname, First" cells are turned round. */
   function namesFromRows(rows, { swap = false } = {}) {
     if (!rows.length) return { names: [], hasHeader: false, columns: '' };
+    // the heading row may sit below a title or blank-ish rows ("Class list: 9B"); drop anything above it
+    // (only a few rows, with more below the heading than above, so a stray heading never drops students)
+    const headAt = rows.slice(0, 4).findIndex(r => r.some(headRole));
+    if (headAt > 0 && rows.length - headAt - 1 > headAt) rows = rows.slice(headAt);
     const width = Math.max(...rows.map(r => r.length));
     const roles = rows[0].map(headRole);
     let hasHeader = roles.some(Boolean);
@@ -300,7 +307,7 @@ const Tools = (() => {
       const m = nm.match(/^([^,]+),\s*([^,]+)$/);
       if (m) nm = `${m[2].trim()} ${m[1].trim()}`;
       nm = tidy(nm);
-      if (!nm || seen.has(nm.toLowerCase())) continue;
+      if (!nm || seen.has(nm.toLowerCase()) || isHeading(nm)) continue;
       seen.add(nm.toLowerCase()); names.push(nm);
     }
     const label = i => (hasHeader && rows[0][i] ? rows[0][i] : `column ${i + 1}`);

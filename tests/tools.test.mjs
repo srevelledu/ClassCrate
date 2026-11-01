@@ -370,6 +370,12 @@ test('no recognisable headings: finds the name column by its contents, not by po
 test('an unrecognised heading row above a name column is skipped', () => {
   assert.deepEqual(names('Code,Who,Year\n1,Ada Lovelace,10\n2,Alan Turing,10'), ['Ada Lovelace', 'Alan Turing']);
 });
+test('a "Name" heading is never imported as a student, even below a title row or repeated', () => {
+  assert.deepEqual(names('Name\nMarie Curie\nIsaac Newton'), ['Marie Curie', 'Isaac Newton']);
+  assert.deepEqual(names('Class list 9B\nName\nMarie Curie\nIsaac Newton'), ['Marie Curie', 'Isaac Newton']);
+  assert.deepEqual(names('Class 9B,,\nFirst Name,Surname,Year\nMarie,Curie,9\nFirst Name,Surname,Year\nIsaac,Newton,9'), ['Marie Curie', 'Isaac Newton']);
+  assert.deepEqual(names('Marie Curie\nIsaac Newton\nStudent Name'), ['Marie Curie', 'Isaac Newton']);
+});
 test('an empty file gives no names', () => {
   assert.deepEqual(names(''), []);
   assert.deepEqual(names('\n\n'), []);
