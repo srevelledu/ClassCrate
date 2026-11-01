@@ -41,7 +41,7 @@ function renderHomeLearningTab() {
 
   const grid = $('#hlGrid');
   if (!cls.students.length) { grid.innerHTML = '<div class="empty">Add students on the Students tab first.</div>'; return; }
-  if (!tasks.length) { grid.innerHTML = '<div class="empty">No home learning yet. Add a task on the left, then tap each student’s box as their work comes in.</div>'; return; }
+  if (!tasks.length) { grid.innerHTML = '<div class="empty">No home learning yet. Add a task, then tap each student’s box as their work comes in.</div>'; return; }
   const head = order.map(t => {
     const c = hlTaskCount(cls, t);
     return `<th class="hl-th ${pastDue(t) ? 'past' : ''}" scope="col"><button class="hl-head" data-hl-menu="${t.id}"><b>${esc(t.title)}</b><span>Due ${esc(shortDate(t.due))}</span><span class="hl-count">${c.inn}/${c.of}</span></button></th>`;

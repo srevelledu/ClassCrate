@@ -376,6 +376,9 @@ test('a "Name" heading is never imported as a student, even below a title row or
   assert.deepEqual(names('Class 9B,,\nFirst Name,Surname,Year\nMarie,Curie,9\nFirst Name,Surname,Year\nIsaac,Newton,9'), ['Marie Curie', 'Isaac Newton']);
   assert.deepEqual(names('Marie Curie\nIsaac Newton\nStudent Name'), ['Marie Curie', 'Isaac Newton']);
 });
+test('invisible control characters from a corrupt file are dropped', () => {
+  assert.deepEqual(names('\u0000\u0001Mar\u0002ie Curie\nIsaac Newton'), ['Marie Curie', 'Isaac Newton']);
+});
 test('an empty file gives no names', () => {
   assert.deepEqual(names(''), []);
   assert.deepEqual(names('\n\n'), []);

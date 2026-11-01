@@ -35,7 +35,7 @@ function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
-    catch (e) { toast('Could not save to this browser (storage full or blocked). Use Data → Export to back up.'); }
+    catch (e) { toast('Could not save to this browser (storage full or blocked). Use Backup & data → Export backup to keep a copy.'); }
   }, 150);
 }
 

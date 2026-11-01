@@ -189,7 +189,8 @@ const Tools = (() => {
   /* Parse CSV text into rows. Handles quotes (with "" escapes and line breaks inside quotes),
      CRLF line endings, a byte-order mark, and comma, semicolon or tab separators. */
   function parseCSV(text) {
-    text = String(text || '').replace(/^﻿/, '');
+    // drop a byte-order mark and invisible control characters (a binary or corrupt file mustn't produce "names")
+    text = String(text || '').replace(/^﻿/, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
     const first = text.split(/\r?\n/).find(l => l.trim()) || '';
     const counts = { ',': 0, ';': 0, '\t': 0 };
     let q = false;

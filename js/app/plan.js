@@ -38,7 +38,7 @@ function planMessages(cls, room, seats, viol) {
       const front = cls.students.filter(s => s.front);
       const keyOf = id => Object.keys(cls.plan.assign).find(k => cls.plan.assign[k] === id);
       const ranks = front.map(s => { const k = keyOf(s.id); const st = seats.find(x => x.key === k); return st ? st.row : null; }).filter(x => x);
-      out.push(`<div class="msg ok"><b>✓ All ${cls.rules.length} rule${cls.rules.length === 1 ? '' : 's'} satisfied.</b>${ranks.length ? ` Front-priority students are in row${ranks.length > 1 ? 's' : ''} ${ranks.sort((a, b) => a - b).join(', ')}.` : ''} <span class="small">(${r.stats.ms} ms)</span></div>`);
+      out.push(`<div class="msg ok"><b>✓ All ${cls.rules.length} rule${cls.rules.length === 1 ? '' : 's'} satisfied.</b>${ranks.length ? (ranks.every(r => r === 1) ? ` Front-priority student${ranks.length > 1 ? 's are all' : ' is'} in the front row.` : ` Front-priority students are in rows ${ranks.sort((a, b) => a - b).join(', ')}.`) : ''} <span class="small">(${r.stats.ms} ms)</span></div>`);
     }
   }
   if (viol.length) {
