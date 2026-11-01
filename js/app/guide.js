@@ -86,6 +86,8 @@ const TOURS = {
       { sel: '#roomStatus', text: 'This shows how many seats the room has, and warns you about anything outside the walls or overlapping.' },
       { sel: '#railClasses', text: 'Last step: open your class and choose this room on its Students page. Then press Generate on the Seating plan.' },
     ],
+    // pressing Done on the last tip ticks off "Draw your room", even if you set up the sample room rather than a new one
+    done: () => { ui.guide.room = true; saveUI(); render(); },
   }; },
 };
 let tour = null;
@@ -120,8 +122,9 @@ function tourGo(dir) {
   }
   if (i < 0) { if (t.i >= 0) showTourStep(); return; }   // nothing earlier to go back to
   if (i >= t.steps.length) {                             // finished
-    const then = t.then, before = t.classesBefore;
+    const then = t.then, before = t.classesBefore, done = t.done;
     endTour();
+    if (done) done();
     if (then) then(before);
     return;
   }
