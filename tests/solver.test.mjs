@@ -211,24 +211,30 @@ test('seats without a clear line of sight to the board are never used', () => {
   for (const r of Sample.rooms()) assert.equal(Core.roomSeats(r).filter(s => s.noView).length, 0, r.name);
 });
 
-test('the front row is the first row of seats, not just the closest seats', () => {
-  // a staggered front row: desks 0.3 m apart front-to-back are one row; the next row is ~1.2 m back
+test('the front row is every seat with no seat between it and the board', () => {
   const R = { scale: 0.5, boundary: Sample.PRESETS.rectangle.boundary, items: [
     { id: 'b', type: 'board', x: 10, y: 0, lenM: 3.6 },
+    // a staggered front row: the middle desk is set 0.3 m back but nothing is in front of it
     { id: 'a1', type: 'single', x: 4, y: 3 }, { id: 'a2', type: 'single', x: 8, y: 3.6 }, { id: 'a3', type: 'single', x: 12, y: 3 },
+    // desks directly behind them: row 2
     { id: 'b1', type: 'single', x: 4, y: 6 }, { id: 'b2', type: 'single', x: 8, y: 6 }, { id: 'b3', type: 'single', x: 12, y: 6 },
+    // a desk further back by the side wall with nothing in front of it: still front row
+    { id: 'side', type: 'single', x: 17, y: 8 },
+    // behind b2: row 3
+    { id: 'c2', type: 'single', x: 8, y: 9 },
   ] };
   const rs = Core.roomSeats(R), rowOf = k => rs.find(s => s.key === k).row;
-  assert.deepEqual(['a1:0', 'a2:0', 'a3:0'].map(rowOf), [1, 1, 1]);
+  assert.deepEqual(['a1:0', 'a2:0', 'a3:0', 'side:0'].map(rowOf), [1, 1, 1, 1]);
   assert.deepEqual(['b1:0', 'b2:0', 'b3:0'].map(rowOf), [2, 2, 2]);
-  // front-priority students can sit anywhere in the front row, including the desk set slightly back
+  assert.equal(rowOf('c2:0'), 3);
+  // front-priority students only ever get front-row seats, including the desks set further back
   const used = new Set();
-  for (let seed = 1; seed <= 60; seed++) {
-    const students = [{ id: 'f1', name: 'F1', front: true }, { id: 'f2', name: 'F2', front: true }, { id: 'f3', name: 'F3', front: true }, { id: 'x', name: 'X' }];
+  for (let seed = 1; seed <= 80; seed++) {
+    const students = [{ id: 'f1', name: 'F1', front: true }, { id: 'f2', name: 'F2', front: true }, { id: 'f3', name: 'F3', front: true }];
     const res = Core.solve({ seats: rs, students, rules: [], mode: 'adjacent', fill: 'front', seed });
-    for (const [k, id] of Object.entries(res.assignment)) { if (id !== 'x') { assert.equal(rowOf(k), 1); used.add(k); } else assert.equal(rowOf(k), 2); }
+    for (const k of Object.keys(res.assignment)) { assert.equal(rowOf(k), 1); used.add(k); }
   }
-  assert.ok(used.has('a2:0'));
+  assert.ok(used.has('a2:0') && used.has('side:0'));
 });
 
 console.log(`\n${passed} passed${process.exitCode ? ', some FAILED' : ''}\n`);

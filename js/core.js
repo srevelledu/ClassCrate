@@ -6,7 +6,8 @@
 const Core = (() => {
   const ADJ_M = 1.5;      // seats on different tables within this many metres are "adjacent"
   const CHAIR_M = 0.5;    // depth of the chair/stool zone beside a seated edge
-  const ROW_M = 0.6;      // seats within this distance (front to back) of a row's first seat are in the same row
+  const AHEAD_M = 0.3;    // a seat counts as in front of another only if it's at least this much nearer the board
+  const LANE_M = 0.5;     // ...and no more than this far to the side (it's in the way of that seat's view)
   const SEAT_M = 0.6;     // table edge allowed per student
   const EPS = 1e-6;
 
@@ -268,9 +269,11 @@ const Core = (() => {
       for (const s of g.seats) {
         // rows run parallel to the board: measure straight back from the board's wall line
         const dist = bg ? Math.max(0, (bg.mid.x - s.x) * bg.n.x + (bg.mid.y - s.y) * bg.n.y) : s.y - minY;
+        // position along the board (sideways), to tell which seats are in front of which
+        const across = bg ? (s.x - bg.mid.x) * bg.n.y - (s.y - bg.mid.y) * bg.n.x : s.x;
         // a seat without a clear view of the board is never used for students
         const noView = !!sees && !sees(s);
-        seats.push({ key: s.key, itemId: it.id, x: s.x, y: s.y, dist, unavailable: s.unavailable || noView, noView, switchedOff: s.unavailable, spacing: s.spacing, side: s.side, scale: room.scale || 0.5 });
+        seats.push({ key: s.key, itemId: it.id, x: s.x, y: s.y, dist, across, unavailable: s.unavailable || noView, noView, switchedOff: s.unavailable, spacing: s.spacing, side: s.side, scale: room.scale || 0.5 });
       }
     }
     const avail = seats.filter(s => !s.unavailable), rows = seatRows(avail);
@@ -278,18 +281,23 @@ const Core = (() => {
     avail.forEach((s, i) => { s.row = rows[i]; });
     return seats;
   }
-  /* Rows of seats, numbered from the board (1 = front row). Seats are grouped by how far back they are,
-     not by exact distance: a seat a few centimetres further back (a staggered desk, a round table) is
-     still in the same row. A new row starts once a seat is more than ROW_M behind the row's first seat. */
+  /* Rows of seats, numbered from the board. The front row (1) is every seat with no other seat between
+     it and the board, however far back it is; a seat with front-row seats in front of it is in row 2,
+     and so on. A seat is "in front" of another if it's nearer the board (by AHEAD_M or more, so a
+     slightly staggered neighbour doesn't count) and in its lane to the board (within LANE_M sideways). */
   function seatRows(seats) {
     const order = seats.map((s, i) => i).sort((a, b) => seats[a].dist - seats[b].dist);
     const rows = new Array(seats.length);
-    let row = 0, start = -Infinity;
-    for (const i of order) {
-      const s = seats[i], gap = ROW_M / (s.scale || 0.5);
-      if (s.dist - start > gap) { row++; start = s.dist; }
+    const across = s => (s.across ?? s.x);
+    order.forEach((i, n) => {
+      const s = seats[i], sc = s.scale || 0.5;
+      let row = 1;
+      for (let m = 0; m < n; m++) {
+        const j = order[m], b = seats[j];
+        if (s.dist - b.dist >= AHEAD_M / sc && Math.abs(across(s) - across(b)) <= LANE_M / sc) row = Math.max(row, rows[j] + 1);
+      }
       rows[i] = row;
-    }
+    });
     return rows;
   }
 
