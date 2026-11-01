@@ -56,6 +56,7 @@ async function newClass() {
   });
   preview();
   inp.focus();
+  autoTour('class');
 }
 const UI_ICON = { dots: '<svg class="ico fill" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>' };
 function renderCrumb() {
@@ -68,7 +69,7 @@ function renderCrumb() {
 }
 const isNarrow = () => matchMedia('(max-width: 900px)').matches;
 function renderRail() {
-  $('#guideRail').hidden = !ui.guide.hidden;
+  $('#guideRail').hidden = !ui.guide.hidden || guideOver();
   const inClass = CLASS_TABS.includes(ui.tab);
   $('#rail').classList.toggle('open', !!ui.railOpen);
   document.body.classList.toggle('rail-open', !!ui.railOpen);

@@ -3,10 +3,20 @@
    9. GETTING-STARTED GUIDE
    A three-step checklist on the Classes page: create a class, add students, draw your room. Each
    step's button starts a short guided tour that highlights one control at a time with a tip
-   (Back / Next / Skip). Steps tick themselves off as they're done. Once all three are done (or the guide is hidden) it moves out of the way, to a
+   (Back / Next / Skip). Steps tick themselves off as they're done. Hiding the guide moves it to a
    "Getting started" link at the bottom of the side menu, which brings it back.
+   Each tour also starts by itself the first time its part of the app is opened (New class, a class's
+   Students page, Rooms). Once all three tours have been shown, or all three steps are done, the guide
+   is finished for good: no more tours start by themselves and the card and side-menu link go away.
 ================================================================= */
 ui.guide = Object.assign({ hidden: false, room: false, done: false }, ui.guide);
+ui.guide.toured = Object.assign({ class: false, students: false, room: false }, ui.guide.toured);
+const guideOver = () => !!ui.guide.done;
+/* Start a tour by itself the first time its part of the app is opened, while the guide is still running. */
+function autoTour(name, arg) {
+  if (guideOver() || ui.guide.toured[name] || tour) return;
+  startTour(name, arg);
+}
 
 function guideSteps() {
   const mine = data.classes.filter(c => !c.sample);
@@ -20,8 +30,8 @@ function guideSteps() {
 }
 function renderGuide() {
   const el = $('#guide');
-  $('#guideRail').hidden = !ui.guide.hidden;
-  if (ui.guide.hidden) { el.innerHTML = ''; return; }
+  $('#guideRail').hidden = !ui.guide.hidden || guideOver();
+  if (ui.guide.hidden || guideOver()) { el.innerHTML = ''; return; }
   const steps = guideSteps(), done = steps.filter(s => s.done).length, next = steps.findIndex(s => !s.done);
   el.innerHTML = `<section class="guide-card" aria-label="Getting started">
     <div class="guide-head"><b class="grow">Get started with ClassCrate</b><span class="hint">${done} of ${steps.length} done</span><button class="btn sm ghost" data-guide-hide>Hide</button></div>
@@ -47,7 +57,7 @@ const TOURS = {
       { sel: '#ncRoom', text: 'Pick the room you teach this class in. You can draw your own room afterwards and switch to it.' },
       { sel: '.modal button[type="submit"]', text: 'Press Create class. The tour carries on with adding your students.', wait: true, until: () => !$('#ncName') },
     ],
-    then: before => (data.classes.length > before ? startTour('students', data.classes[data.classes.length - 1]) : null),
+    then: before => (data.classes.length > before ? autoTour('students', data.classes[data.classes.length - 1]) : null),
   }),
   students: cls => ({
     steps: [
@@ -81,6 +91,7 @@ const TOURS = {
 let tour = null;
 function startTour(name, arg) {
   endTour();
+  if (!ui.guide.toured[name]) { ui.guide.toured[name] = true; saveUI(); }
   const t = TOURS[name](arg);
   tour = { ...t, name, i: -1, el: null, tip: null, classesBefore: data.classes.length };
   window.addEventListener('resize', placeTour);
@@ -132,7 +143,12 @@ function showTourStep() {
   t.poll = setInterval(() => {
     if (!tour) return;
     if (st.until && st.until()) return tourGo(1);
-    if (!t.el.isConnected) { const again = visibleEl(st.sel); if (again) { t.el = again; again.classList.add('spot'); placeTour(); } else endTour(); }
+    if (!t.el.isConnected) {
+      const again = visibleEl(st.sel), lastStep = t.steps[t.steps.length - 1];
+      if (again) { t.el = again; again.classList.add('spot'); placeTour(); }
+      else if (lastStep.until && lastStep.until()) { t.i = t.steps.length - 1; tourGo(1); } // finished early (e.g. pressed Create class straight away)
+      else endTour();
+    }
   }, 300);
 }
 function bindTourTip(tip) {
@@ -154,14 +170,20 @@ function placeTour() {
   tip.style.top = top + 'px'; tip.style.left = left + 'px';
 }
 
-/* Called on every render: the first time all three steps are done, tuck the guide away. */
+/* Called on every render: the first time all three steps are done, or all three tours have been
+   shown, the guide is finished and never comes back. Otherwise, opening Rooms or a class's Students
+   page for the first time starts its tour. */
 let guideChecked = false;
 function checkGuide() {
   const first = !guideChecked; guideChecked = true;
-  if (ui.guide.done || !guideSteps().every(s => s.done)) return;
-  ui.guide.done = true; ui.guide.hidden = true; saveUI();
-  $('#guideRail').hidden = false;
-  if (!first) toast('✓ You’re all set up. The guide is now under Getting started in the side menu.');
+  if (!guideOver() && (guideSteps().every(s => s.done) || Object.values(ui.guide.toured).every(Boolean))) {
+    ui.guide.done = true; ui.guide.hidden = true; saveUI();
+    if (!first && !tour) toast('✓ You’re all set up.');
+  }
+  $('#guideRail').hidden = !ui.guide.hidden || guideOver();
+  if (guideOver() || tour || $('.modal-bg')) return;
+  if (ui.tab === 'room') setTimeout(() => autoTour('room'));
+  else if (ui.tab === 'students') setTimeout(() => autoTour('students', activeClass()));
 }
 
 function bindGuide() {
