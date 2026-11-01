@@ -200,7 +200,55 @@ async function importCsv(file) {
   document.body.appendChild(bg);
   bg.querySelector('button[type=submit]').focus();
 }
+/* ---------- Copy students from another class ---------- */
+/* Adds another class's students (with front-priority flags) and keep-apart/together rules to this
+   class. Copied students get new ids so the classes stay independent; anyone already in the class
+   (same name) is reused rather than duplicated. Seat locks aren't copied: they belong to the other
+   class's room. */
+function copyFromClass() {
+  const cls = activeClass(), sources = data.classes.filter(c => c !== cls && c.students.length);
+  if (!sources.length) return toast('No other class has students to copy yet.');
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<form class="modal" role="dialog" aria-label="Copy from another class"><h3>Copy from another class</h3>
+    <label class="field"><span>Copy students and rules from</span><select class="input" id="cfFrom">${sources.map(c => `<option value="${c.id}">${esc(c.name)} (${c.students.length} student${c.students.length === 1 ? '' : 's'})</option>`).join('')}</select></label>
+    <div class="hint">Students already in ${esc(cls.name)} aren’t added twice. Seat locks aren’t copied.</div>
+    <div class="btn-row"><button type="button" class="btn" data-close>Cancel</button><button type="submit" class="btn primary">Copy</button></div></form>`;
+  const close = () => bg.remove();
+  bg.addEventListener('click', e => { if (e.target === bg || e.target.closest('[data-close]')) close(); });
+  bg.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  bg.querySelector('form').addEventListener('submit', e => {
+    e.preventDefault();
+    const from = sources.find(c => c.id === bg.querySelector('#cfFrom').value);
+    close();
+    if (!from) return;
+    let added = 0, rules = 0;
+    mutate(() => {
+      const wasEmpty = !cls.students.length, byName = new Map(cls.students.map(s => [s.name.toLowerCase(), s.id])), map = new Map();
+      for (const s of from.students) {
+        const key = s.name.toLowerCase();
+        if (byName.has(key)) { map.set(s.id, byName.get(key)); continue; }
+        const id = uid('st');
+        byName.set(key, id); map.set(s.id, id);
+        cls.students.push({ id, name: s.name, front: !!s.front, lock: null }); added++;
+      }
+      const have = new Set(cls.rules.map(r => r.type + ':' + [...r.members].sort().join(',')));
+      for (const r of from.rules) {
+        const members = [...new Set(r.members.map(m => map.get(m)).filter(Boolean))];
+        const key = r.type + ':' + [...members].sort().join(',');
+        if (members.length < 2 || have.has(key)) continue;
+        have.add(key);
+        cls.rules.push({ id: uid('rule'), type: r.type, members }); rules++;
+      }
+      if (wasEmpty) cls.adjacency = from.adjacency;
+    });
+    toast(`Copied ${added} student${added === 1 ? '' : 's'} and ${rules} rule${rules === 1 ? '' : 's'} from ${from.name}`);
+  });
+  document.body.appendChild(bg);
+  bg.querySelector('#cfFrom').focus();
+}
 function bindCsvImport() {
+  $('#copyClassBtn').addEventListener('click', copyFromClass);
   $('#csvBtn').addEventListener('click', () => $('#csvFile').click());
   $('#csvFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importCsv(f); });
 }
