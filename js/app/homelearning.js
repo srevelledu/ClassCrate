@@ -55,8 +55,11 @@ function renderHomeLearningTab() {
     return `<tr><th scope="row" class="hl-name">${avatar(s.name)}<span>${esc(s.name)}</span></th>${cells}
       <td class="hl-rate ${pct !== null && pct < 70 ? 'low' : ''}">${pct === null ? '—' : `${r.inn}/${r.due}<span class="hl-bar"><i style="width:${pct}%"></i></span>`}</td></tr>`;
   }).join('');
+  // the table is redrawn on every tap: keep its scroll position so the view doesn't jump
+  const old = grid.querySelector('.hl-scroll'), keep = old && { top: old.scrollTop, left: old.scrollLeft };
   grid.innerHTML = `<div class="hl-legend">${['done', 'late', 'excused', 'missing'].map(k => `<span><i class="hl-cell hl-${k}">${HL_MARK[k]}</i>${HL_LABEL[k]}</span>`).join('')}<span class="hint">Tap a box to change it.</span></div>
     <div class="hl-scroll"><table class="hl-table"><thead><tr><th class="hl-name" scope="col">Student</th>${head}<th class="hl-rate" scope="col">Handed in</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  if (keep) { const sc = grid.querySelector('.hl-scroll'); sc.scrollTop = keep.top; sc.scrollLeft = keep.left; }
 }
 
 /* A small form dialog (title + fields) resolving to the entered values, or null on cancel. */
@@ -122,6 +125,6 @@ function bindHomeLearning() {
     }, { noRender: true });
     renderHomeLearningTab();
     const again = document.querySelector(`[data-hl="${tid}|${sid}"]`);
-    if (again) again.focus(); // keep keyboard focus on the box just changed
+    if (again) again.focus({ preventScroll: true }); // keep keyboard focus on the box just changed, without scrolling
   });
 }
