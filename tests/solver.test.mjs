@@ -39,20 +39,20 @@ console.log(`\nSample: ${cls.students.length} students, ${apartRules.length} kee
 
 test('28 students / 6 keep-apart / 4 front-priority: solves in both adjacency modes, 300 runs each', () => {
   for (const mode of ['adjacent', 'table']) {
-    let worstMs = 0, worstFrontRank = 0;
+    let worstMs = 0, worstFrontRow = 0;
     for (let seed = 1; seed <= 300; seed++) {
       const res = Core.solve({ seats, students: cls.students, rules: apartRules, mode, seed, label });
       assert.ok(res.ok, `seed ${seed} failed: ${res.problems.join(' ')}`);
       verify(res, apartRules, mode);
       worstMs = Math.max(worstMs, res.stats.ms);
-      // front-priority students must be in the front-most seats (ranks are ties-aware)
+      // front-priority students must be in the front row
       for (const [k, id] of Object.entries(res.assignment)) {
-        if (frontIds.includes(id)) worstFrontRank = Math.max(worstFrontRank, seats.find(s => s.key === k).rank);
+        if (frontIds.includes(id)) worstFrontRow = Math.max(worstFrontRow, seats.find(s => s.key === k).row);
       }
     }
-    // 4 front seats needed; front row of tables has 6 seats at the same distance band
-    assert.ok(worstFrontRank <= 6, 'front-priority student seated at rank ' + worstFrontRank);
-    console.log(`    mode=${mode}: worst solve ${worstMs} ms, worst front-priority seat rank ${worstFrontRank}`);
+    // 4 front seats needed; the front row of tables has 6 seats
+    assert.equal(worstFrontRow, 1, 'front-priority student seated in row ' + worstFrontRow);
+    console.log(`    mode=${mode}: worst solve ${worstMs} ms, worst front-priority row ${worstFrontRow}`);
   }
 });
 
@@ -209,6 +209,26 @@ test('seats without a clear line of sight to the board are never used', () => {
   assert.equal(rs.find(s => s.key === 'side:0').noView, false);
   // the sample rooms keep all their seats
   for (const r of Sample.rooms()) assert.equal(Core.roomSeats(r).filter(s => s.noView).length, 0, r.name);
+});
+
+test('the front row is the first row of seats, not just the closest seats', () => {
+  // a staggered front row: desks 0.3 m apart front-to-back are one row; the next row is ~1.2 m back
+  const R = { scale: 0.5, boundary: Sample.PRESETS.rectangle.boundary, items: [
+    { id: 'b', type: 'board', x: 10, y: 0, lenM: 3.6 },
+    { id: 'a1', type: 'single', x: 4, y: 3 }, { id: 'a2', type: 'single', x: 8, y: 3.6 }, { id: 'a3', type: 'single', x: 12, y: 3 },
+    { id: 'b1', type: 'single', x: 4, y: 6 }, { id: 'b2', type: 'single', x: 8, y: 6 }, { id: 'b3', type: 'single', x: 12, y: 6 },
+  ] };
+  const rs = Core.roomSeats(R), rowOf = k => rs.find(s => s.key === k).row;
+  assert.deepEqual(['a1:0', 'a2:0', 'a3:0'].map(rowOf), [1, 1, 1]);
+  assert.deepEqual(['b1:0', 'b2:0', 'b3:0'].map(rowOf), [2, 2, 2]);
+  // front-priority students can sit anywhere in the front row, including the desk set slightly back
+  const used = new Set();
+  for (let seed = 1; seed <= 60; seed++) {
+    const students = [{ id: 'f1', name: 'F1', front: true }, { id: 'f2', name: 'F2', front: true }, { id: 'f3', name: 'F3', front: true }, { id: 'x', name: 'X' }];
+    const res = Core.solve({ seats: rs, students, rules: [], mode: 'adjacent', fill: 'front', seed });
+    for (const [k, id] of Object.entries(res.assignment)) { if (id !== 'x') { assert.equal(rowOf(k), 1); used.add(k); } else assert.equal(rowOf(k), 2); }
+  }
+  assert.ok(used.has('a2:0'));
 });
 
 console.log(`\n${passed} passed${process.exitCode ? ', some FAILED' : ''}\n`);

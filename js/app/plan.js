@@ -37,8 +37,8 @@ function planMessages(cls, room, seats, viol) {
     if (r.ok && !viol.length) {
       const front = cls.students.filter(s => s.front);
       const keyOf = id => Object.keys(cls.plan.assign).find(k => cls.plan.assign[k] === id);
-      const ranks = front.map(s => { const k = keyOf(s.id); const st = seats.find(x => x.key === k); return st ? st.rank : null; }).filter(x => x);
-      out.push(`<div class="msg ok"><b>✓ All ${cls.rules.length} rule${cls.rules.length === 1 ? '' : 's'} satisfied.</b>${ranks.length ? ` Front-priority students are in front-distance ranks ${ranks.sort((a, b) => a - b).join(', ')}.` : ''} <span class="small">(${r.stats.ms} ms)</span></div>`);
+      const ranks = front.map(s => { const k = keyOf(s.id); const st = seats.find(x => x.key === k); return st ? st.row : null; }).filter(x => x);
+      out.push(`<div class="msg ok"><b>✓ All ${cls.rules.length} rule${cls.rules.length === 1 ? '' : 's'} satisfied.</b>${ranks.length ? ` Front-priority students are in row${ranks.length > 1 ? 's' : ''} ${ranks.sort((a, b) => a - b).join(', ')}.` : ''} <span class="small">(${r.stats.ms} ms)</span></div>`);
     }
   }
   if (viol.length) {
@@ -80,7 +80,7 @@ function renderPlanTab() {
     const seat = seats.find(s => s.key === key);
     const locked = sel.lock && sel.lock === key;
     $('#selStudent').innerHTML = `<div class="selcard"><div class="row"><b class="grow">${esc(sel.name)}</b><button class="btn ghost sm icon" data-selact="close">✕</button></div>
-      <div class="small muted">${seat ? `Seat ${(room.showMetres ? (seat.dist * (room.scale || .5)).toFixed(1) + ' m' : r2(seat.dist) + ' squares')} from the board (rank ${seat.rank})` : 'Not seated'}</div>
+      <div class="small muted">${seat ? `Seat ${(room.showMetres ? (seat.dist * (room.scale || .5)).toFixed(1) + ' m' : r2(seat.dist) + ' squares')} from the board (row ${seat.row})` : 'Not seated'}</div>
       <div class="btn-row">
         ${seat ? `<button class="btn sm ${locked ? 'on' : ''}" data-selact="lock">${locked ? '🔒 Locked (tap to unlock)' : '🔓 Lock to this seat'}</button>` : ''}
         <button class="btn sm ${sel.front ? 'on' : ''}" data-selact="front">★ Front priority</button>

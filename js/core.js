@@ -6,6 +6,7 @@
 const Core = (() => {
   const ADJ_M = 1.5;      // seats on different tables within this many metres are "adjacent"
   const CHAIR_M = 0.5;    // depth of the chair/stool zone beside a seated edge
+  const ROW_M = 0.6;      // seats within this distance (front to back) of a row's first seat are in the same row
   const SEAT_M = 0.6;     // table edge allowed per student
   const EPS = 1e-6;
 
@@ -272,10 +273,24 @@ const Core = (() => {
         seats.push({ key: s.key, itemId: it.id, x: s.x, y: s.y, dist, unavailable: s.unavailable || noView, noView, switchedOff: s.unavailable, spacing: s.spacing, side: s.side, scale: room.scale || 0.5 });
       }
     }
-    const avail = seats.filter(s => !s.unavailable).sort((a, b) => a.dist - b.dist);
-    let rank = 0, prev = -1;
-    avail.forEach((s, i) => { if (Math.abs(s.dist - prev) > .05) { rank = i + 1; prev = s.dist; } s.rank = rank; });
+    const avail = seats.filter(s => !s.unavailable), rows = seatRows(avail);
+    seats.forEach(s => { s.row = null; });
+    avail.forEach((s, i) => { s.row = rows[i]; });
     return seats;
+  }
+  /* Rows of seats, numbered from the board (1 = front row). Seats are grouped by how far back they are,
+     not by exact distance: a seat a few centimetres further back (a staggered desk, a round table) is
+     still in the same row. A new row starts once a seat is more than ROW_M behind the row's first seat. */
+  function seatRows(seats) {
+    const order = seats.map((s, i) => i).sort((a, b) => seats[a].dist - seats[b].dist);
+    const rows = new Array(seats.length);
+    let row = 0, start = -Infinity;
+    for (const i of order) {
+      const s = seats[i], gap = ROW_M / (s.scale || 0.5);
+      if (s.dist - start > gap) { row++; start = s.dist; }
+      rows[i] = row;
+    }
+    return rows;
   }
 
   function seatsConflict(a, b, mode) {
@@ -374,9 +389,10 @@ const Core = (() => {
     }
 
     // ---- search ----
-    // seat order for "fill from front": by distance, random among ties
+    // seat order for "fill from front": by row (front row first), random within a row
+    const rowOf = seatRows(seats);
     const jitter = seats.map(() => rng());
-    const seatOrder = seats.map((_, i) => i).sort((a, b) => (Math.round(seats[a].dist * 4) - Math.round(seats[b].dist * 4)) || (jitter[a] - jitter[b]));
+    const seatOrder = seats.map((_, i) => i).sort((a, b) => (rowOf[a] - rowOf[b]) || (jitter[a] - jitter[b]));
     const orderPos = new Int32Array(S); seatOrder.forEach((s, p) => { orderPos[s] = p; });
     const free = toSeat.filter(s => !locked.has(s.id));
     const nFree = free.length;
@@ -431,7 +447,7 @@ const Core = (() => {
         for (let s = 0; s < S; s++) if (dom[v][s]) vals.push(s);
         if (free[v].front) {
           const j = vals.map(() => rng());
-          const idx = vals.map((_, k) => k).sort((a, b) => (Math.round(seats[vals[a]].dist * 4) - Math.round(seats[vals[b]].dist * 4)) || (j[a] - j[b]));
+          const idx = vals.map((_, k) => k).sort((a, b) => (rowOf[vals[a]] - rowOf[vals[b]]) || (j[a] - j[b]));
           vals = idx.map(k => vals[k]);
         } else shuffle(vals, rng);
         for (const s of vals) {
@@ -539,7 +555,7 @@ const Core = (() => {
         if (!m.has(a)) m.set(a, []);
         m.get(a).push(b);
       }
-      const row = i => Math.round(seats[i].dist * 4);
+      const row = i => rowOf[i];
       const canMove = (id, to) => (apartP.get(id) || []).every(q => !at.has(q) || !conf[to][at.get(q)])
         && (togP.get(id) || []).every(q => !at.has(q) || seats[at.get(q)].itemId === seats[to].itemId);
       for (let guard = 0; guard < S * S; guard++) {
