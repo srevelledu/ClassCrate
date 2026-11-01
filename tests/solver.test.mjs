@@ -184,4 +184,31 @@ test('Sample room furniture is valid', () => {
   for (const it of room.items) assert.equal(Core.itemProblem(room, it), null, it.id);
 });
 
+test('seats without a clear line of sight to the board are never used', () => {
+  // L-shaped room: a desk round the corner of the step can't see the board
+  const L = { scale: 0.5, boundary: Sample.PRESETS.lab.boundary, items: [
+    { id: 'b', type: 'board', x: 13, y: 0, lenM: 3.6 },
+    { id: 'hid', type: 'single', x: 24.5, y: 6.5 },
+    { id: 'vis', type: 'single', x: 8, y: 8 },
+  ] };
+  const ls = Core.roomSeats(L);
+  assert.equal(ls.find(s => s.key === 'hid:0').unavailable, true);
+  assert.equal(ls.find(s => s.key === 'vis:0').unavailable, false);
+  const res = Core.solve({ seats: ls, students: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], rules: [], mode: 'adjacent', fill: 'front', seed: 1 });
+  assert.deepEqual(Object.keys(res.assignment), ['vis:0']);
+  // tall furniture (lockers) between a desk and the board blocks it; a low teacher's desk doesn't
+  const R = { scale: 0.5, boundary: Sample.PRESETS.rectangle.boundary, items: [
+    { id: 'b', type: 'board', x: 10, y: 0, lenM: 3.6 },
+    { id: 'lk', type: 'lockers', x: 8.8, y: 4 },
+    { id: 'behind', type: 'single', x: 9.3, y: 8 },
+    { id: 'td', type: 'teacher', x: 2, y: 3 },
+    { id: 'side', type: 'single', x: 2.5, y: 8 },
+  ] };
+  const rs = Core.roomSeats(R);
+  assert.equal(rs.find(s => s.key === 'behind:0').noView, true);
+  assert.equal(rs.find(s => s.key === 'side:0').noView, false);
+  // the sample rooms keep all their seats
+  for (const r of Sample.rooms()) assert.equal(Core.roomSeats(r).filter(s => s.noView).length, 0, r.name);
+});
+
 console.log(`\n${passed} passed${process.exitCode ? ', some FAILED' : ''}\n`);

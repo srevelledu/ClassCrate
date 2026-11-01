@@ -613,7 +613,7 @@ function moveStudent(id, to) {
     return;
   }
   const seat = Core.roomSeats(room).find(s => s.key === to);
-  if (!seat || seat.unavailable) return toast('That seat is unavailable.');
+  if (!seat || seat.unavailable) return toast(seat && seat.noView && !seat.switchedOff ? 'That seat has no clear view of the board, so students can’t sit there.' : 'That seat is unavailable.');
   const occ = cls.plan.assign[to];
   const occSt = occ && cls.students.find(s => s.id === occ);
   if (occSt && occSt.lock === to) return toast(`${occSt.name} is locked to that seat. Unlock them first.`);

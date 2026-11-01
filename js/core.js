@@ -37,13 +37,13 @@ const Core = (() => {
     bench:   { label: 'Lab bench',       seated: true },
     teacher: { label: "Teacher's desk",  w: 1.5, d: 0.75, sides: { t: 0, b: 0, l: 0, r: 0 } },
     // storage and fittings: no seats, just so the plan matches the real room (typical sizes)
-    bookcase: { label: 'Bookcase',       w: 0.9, d: 0.35, sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
-    cupboard: { label: 'Cupboard',       w: 1.0, d: 0.5,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
-    filing:   { label: 'Filing cabinet', w: 0.5, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, short: 'Files' },
-    lockers:  { label: 'Lockers',        w: 1.2, d: 0.45, sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
+    bookcase: { label: 'Bookcase',       w: 0.9, d: 0.35, sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, tall: true },
+    cupboard: { label: 'Cupboard',       w: 1.0, d: 0.5,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, tall: true },
+    filing:   { label: 'Filing cabinet', w: 0.5, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, tall: true, short: 'Files' },
+    lockers:  { label: 'Lockers',        w: 1.2, d: 0.45, sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, tall: true },
     trolley:  { label: 'Laptop trolley', w: 0.9, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, short: 'Laptops' },
     sink:     { label: 'Sink',           w: 0.9, d: 0.6,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true },
-    fume:     { label: 'Fume cupboard',  w: 1.2, d: 0.8,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, short: 'Fume' },
+    fume:     { label: 'Fume cupboard',  w: 1.2, d: 0.8,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, tall: true, short: 'Fume' },
     rug:      { label: 'Reading rug',    w: 2.0, d: 1.5,  sides: { t: 0, b: 0, l: 0, r: 0 }, fixture: true, floor: true, short: 'Rug' },
     board:   { label: 'Board',  wall: true, lenM: 3.6 },
     door:    { label: 'Door',   wall: true, lenM: 0.9 },
@@ -53,6 +53,7 @@ const Core = (() => {
   const isSeated = it => !!(TYPES[it.type] && TYPES[it.type].seated);
   const isRound = it => !!(TYPES[it.type] && TYPES[it.type].round);
   const isFixture = it => !!(TYPES[it.type] && TYPES[it.type].fixture);
+  const isTall = it => !!(TYPES[it.type] && TYPES[it.type].tall);   // taller than a seated student's eye line: blocks the view
   const isFloor = it => !!(TYPES[it.type] && TYPES[it.type].floor);   // lies on the floor: furniture can stand on it
   const wallLenM = it => it.lenM || TYPES[it.type].lenM;
   const benchLenM = it => clamp(+it.lenM || 2.4, 0.6, 20);
@@ -213,10 +214,50 @@ const Core = (() => {
 
   function boardOf(room) { return room.items.find(i => i.type === 'board') || null; }
 
+  /* Line of sight to the board. A sight line is blocked if it crosses a wall of the room (e.g. round
+     the corner of an L-shaped room) or passes through tall furniture (bookcases, cupboards, lockers...).
+     Tables, desks, sinks and rugs are below a seated student's eye line, so they don't block it.
+     A seat has a clear view when it can see at least 3/4 of the board; anything less (a corner of the
+     board past a cupboard) isn't good enough to learn from. */
+  const VIEW_SAMPLES = 9, VIEW_NEED = 0.75;
+  function segHitsRect(a, b, r) {
+    // Liang–Barsky clip of segment a→b against the rect, shrunk slightly so grazing an edge doesn't count
+    const x0 = r.x + .02, y0 = r.y + .02, x1 = r.x + r.w - .02, y1 = r.y + r.h - .02;
+    if (x1 <= x0 || y1 <= y0) return false;
+    let t0 = 0, t1 = 1;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    for (const [p, q] of [[-dx, a.x - x0], [dx, x1 - a.x], [-dy, a.y - y0], [dy, y1 - a.y]]) {
+      if (Math.abs(p) < EPS) { if (q < 0) return false; continue; }
+      const t = q / p;
+      if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+      else { if (t < t0) return false; if (t < t1) t1 = t; }
+    }
+    return t0 < t1;
+  }
+  function boardView(room) {
+    const board = boardOf(room);
+    if (!board || room.boundary.length < 3) return null;
+    const bg = wallGeom(room, board), poly = room.boundary;
+    // sample points along the board, nudged just inside the room so the board's own wall doesn't count
+    const pts = [];
+    for (let i = 0; i < VIEW_SAMPLES; i++) {
+      const t = (i + .5) / VIEW_SAMPLES;
+      pts.push({ x: bg.p1.x + (bg.p2.x - bg.p1.x) * t - bg.n.x * .05, y: bg.p1.y + (bg.p2.y - bg.p1.y) * t - bg.n.y * .05 }); // n points out of the room
+    }
+    const blockers = room.items.filter(isTall).map(it => itemGeom(it, room.scale).table);
+    const clear = (a, b) => {
+      for (let i = 0; i < poly.length; i++) if (segIntersect(a, b, poly[i], poly[(i + 1) % poly.length])) return false;
+      if (!pointInPoly({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, poly)) return false; // runs outside the room through a corner
+      return !blockers.some(r => segHitsRect(a, b, r));
+    };
+    return seat => pts.filter(p => clear(seat, p)).length >= Math.ceil(VIEW_SAMPLES * VIEW_NEED);
+  }
+
   /* All seats in the room with distance from the front (board). */
   function roomSeats(room) {
     const board = boardOf(room);
     const bg = board && room.boundary.length >= 3 ? wallGeom(room, board) : null;
+    const sees = boardView(room);
     const minY = Math.min(...room.boundary.map(p => p.y));
     const seats = [];
     let tableNo = 0;
@@ -226,7 +267,9 @@ const Core = (() => {
       for (const s of g.seats) {
         // rows run parallel to the board: measure straight back from the board's wall line
         const dist = bg ? Math.max(0, (bg.mid.x - s.x) * bg.n.x + (bg.mid.y - s.y) * bg.n.y) : s.y - minY;
-        seats.push({ key: s.key, itemId: it.id, x: s.x, y: s.y, dist, unavailable: s.unavailable, spacing: s.spacing, side: s.side, scale: room.scale || 0.5 });
+        // a seat without a clear view of the board is never used for students
+        const noView = !!sees && !sees(s);
+        seats.push({ key: s.key, itemId: it.id, x: s.x, y: s.y, dist, unavailable: s.unavailable || noView, noView, switchedOff: s.unavailable, spacing: s.spacing, side: s.side, scale: room.scale || 0.5 });
       }
     }
     const avail = seats.filter(s => !s.unavailable).sort((a, b) => a.dist - b.dist);
@@ -548,7 +591,7 @@ const Core = (() => {
   }
 
   return {
-    TYPES, ADJ_M, CHAIR_M, isWall, isSeated, isRound, isFixture, isFloor, wallLenM, benchLenM, tableSizeM, tableDims, itemGeom, wallGeom, roomSeats, itemProblem, rectInside,
+    TYPES, ADJ_M, CHAIR_M, isWall, isSeated, isRound, isFixture, isFloor, isTall, wallLenM, benchLenM, tableSizeM, tableDims, itemGeom, wallGeom, roomSeats, itemProblem, rectInside,
     pointInPoly, projectToSeg, polyArea, selfIntersects, seatsConflict, solve, checkPlan, mulberry32, shuffle, boardOf, clamp,
   };
 })();

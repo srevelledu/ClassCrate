@@ -98,13 +98,14 @@ function renderRoomTab() {
 
 function renderRoomStatus(room) {
   const seats = Core.roomSeats(room);
-  const avail = seats.filter(s => !s.unavailable).length;
+  const avail = seats.filter(s => !s.unavailable).length, noView = seats.filter(s => s.noView && !s.switchedOff).length;
   const bad = room.items.filter(i => Core.itemProblem(room, i)).length;
   const L = room.boundary.reduce((a, p, i) => a + Math.hypot(room.boundary[(i + 1) % room.boundary.length].x - p.x, room.boundary[(i + 1) % room.boundary.length].y - p.y), 0);
   const area = Math.abs(Core.polyArea(room.boundary)) * (room.scale || .5) ** 2;
   const classes = data.classes.filter(c => c.roomId === room.id);
   $('#roomStatus').innerHTML = `<span><b>${avail}</b> seats available${seats.length - avail ? ` (${seats.length - avail} unavailable)` : ''}</span>
     <span>Floor ≈ ${area.toFixed(1)} m² · walls ${fmtLen(room, L)}</span>
+    ${noView ? `<span class="bad">${noView} seat${noView > 1 ? 's have' : ' has'} no clear view of the board, so ${noView > 1 ? 'they aren’t' : 'it isn’t'} used</span>` : ''}
     ${!Core.boardOf(room) ? '<span class="bad">No board: add one to define the front</span>' : ''}
     ${bad ? `<span class="bad">${bad} item${bad > 1 ? 's' : ''} outside the walls or overlapping</span>` : ''}
     <span class="muted">Used by: ${classes.length ? classes.map(c => esc(c.name)).join(', ') : 'no classes yet'}</span>`;
@@ -242,6 +243,12 @@ function builderItem(room, it, seatInfo) {
   const sr = .21 / (room.scale || .5);
   for (const s of g.seats) {
     const info = seatInfo.get(s.key);
+    if (info && info.noView && !s.unavailable) {
+      // no clear view of the board (round a corner, or behind a cupboard): never used for students
+      h += `<circle class="b-seat noview" data-seat="${s.key}" cx="${s.x}" cy="${s.y}" r="${sr}"><title>No clear view of the board, so students aren’t seated here</title></circle>`;
+      h += `<path d="M${s.x - .16} ${s.y}h.32" stroke="#C2410C" stroke-width=".07" stroke-linecap="round" pointer-events="none"/>`;
+      continue;
+    }
     h += `<circle class="b-seat ${s.unavailable ? 'off' : ''}" data-seat="${s.key}" cx="${s.x}" cy="${s.y}" r="${sr}"/>`;
     if (s.unavailable) h += `<path d="M${s.x - .18} ${s.y - .18}l.36 .36m0 -.36l-.36 .36" stroke="#9A968D" stroke-width=".07" pointer-events="none"/>`;
     else if (ui.showDist && info) {

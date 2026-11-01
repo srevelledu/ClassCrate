@@ -139,6 +139,7 @@ kbd { font: 11px Figtree, sans-serif; border: 1px solid var(--line-2); border-bo
 .b-fix-rug { fill: #F1E2D3; stroke: #C9A98A; stroke-dasharray: .2 .15; }
 .b-seat { fill: #fff; stroke: #8D93A0; stroke-width: .06; cursor: pointer; }
 .b-seat.off { fill: #E7E5E0; stroke: #B9B6AE; }
+.b-seat.noview { fill: #FFF1E7; stroke: #E8A57C; cursor: default; }
 .b-seatnum { font: 600 .32px Figtree, sans-serif; fill: #6B7180; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .b-label { font: 600 .48px Figtree, sans-serif; fill: #6B6253; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .b-sel { fill: none; stroke: var(--accent); stroke-width: .08; stroke-dasharray: .25 .15; pointer-events: none; }
