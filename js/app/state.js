@@ -30,14 +30,41 @@ ui.grpSel = null; ui.preview = null; ui.ruleSel = new Set(); ui.selStudent = nul
 
 function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
 function saveUI() { try { localStorage.setItem(UI_KEY, JSON.stringify({ tab: ui.tab, railOpen: ui.railOpen, tool: ui.tool, showDist: ui.showDist, showPrivate: ui.showPrivate, snapAngles: ui.snapAngles, guide: ui.guide })); } catch { /* ignore */ } }
-let saveTimer = null;
+let saveTimer = null, lastSavedAt = 0, saveFailed = false;
+/* Write everything to localStorage now and read it back to check it really stuck. Returns true on success. */
+function saveNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  try {
+    const json = JSON.stringify(data);
+    localStorage.setItem(STORE_KEY, json);
+    if (localStorage.getItem(STORE_KEY) !== json) throw new Error('read-back mismatch');
+    lastSavedAt = Date.now(); saveFailed = false;
+  } catch (e) { saveFailed = true; }
+  syncSaveStatus();
+  return !saveFailed;
+}
+/* Changes are saved automatically a moment after they're made (batched so dragging stays smooth). */
 function save() {
   clearTimeout(saveTimer);
+  syncSaveStatus(true);
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
-    catch (e) { toast('Could not save to this browser (storage full or blocked). Use Data → Export to back up.'); }
+    if (!saveNow()) toast('Could not save to this browser (storage full or blocked). Use Data → Export to back up.');
   }, 150);
 }
+const savePending = () => saveTimer !== null;
+/* The "Saved at…" line on the home learning tab. */
+function syncSaveStatus(pending = savePending()) {
+  const el = document.getElementById('hlSaveState');
+  if (!el) return;
+  el.className = 'save-state ' + (saveFailed ? 'bad' : pending ? 'pending' : lastSavedAt ? 'ok' : '');
+  el.textContent = saveFailed ? 'Not saved: this browser blocked storage. Use ☰ Data → Export backup.'
+    : pending ? 'Saving…'
+    : lastSavedAt ? `Saved ✓ at ${new Date(lastSavedAt).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}. You can still change anything.`
+    : 'Changes save automatically in this browser.';
+}
+// never lose the last change by closing or switching away from the page before the timer fires
+window.addEventListener('pagehide', () => { if (savePending()) saveNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && savePending()) saveNow(); });
 
 function todayStr() { return new Date().toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }); }
 

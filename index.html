@@ -359,7 +359,11 @@
         <div class="saved-list" id="hlTaskList"></div>
       </div>
       <div class="section">
-        <div class="hint">Tap a student’s box to step through: submitted ✓, late L, excused –, then back to not in yet. Once a task is past its due date, anything not handed in shows as missing (!).</div>
+        <button class="btn primary" type="button" id="hlSave">Save home learning</button>
+        <div class="save-state" id="hlSaveState" role="status" aria-live="polite"></div>
+      </div>
+      <div class="section">
+        <div class="hint">Tap a student’s box to step through: submitted ✓, late L, excused –, then back to not in yet. Once a task is past its due date, anything not handed in shows as missing (!). Saved results stay editable: tap a box again to change it, or use a task’s ⋮ menu to edit its name and dates.</div>
       </div>
     </aside>
     <div class="content" id="hlGrid"></div>

@@ -88,6 +88,18 @@ function init() {
   $('#dataBtn').addEventListener('click', dataMenu);
   bindHome(); bindRoom(); bindStudents(); bindPlan(); bindGroups(); bindPicker(); bindHomeLearning(); bindCsvImport(); bindClassTools(); bindPresent(); bindGuide();
   window.addEventListener('resize', () => { if (ui.tab === 'room') renderRoomSvg(); });
+  // ClassCrate open in another tab or window saved something: load it, so this (now stale) copy
+  // doesn't overwrite those changes the next time it saves.
+  window.addEventListener('storage', e => {
+    if (e.key !== STORE_KEY || !e.newValue || savePending()) return;
+    let inc; try { inc = JSON.parse(e.newValue); } catch { return; }
+    if (!inc || !Array.isArray(inc.rooms) || !Array.isArray(inc.classes)) return;
+    data = { ...inc, rooms: inc.rooms.map(normRoom), classes: inc.classes.map(normClass) };
+    fixRefs();
+    hist.past = []; hist.future = [];
+    lastSavedAt = Date.now(); saveFailed = false;
+    render();
+  });
   render();
   if (document.fonts && document.fonts.load) {
     Promise.all(['400', '500', '600', '700'].map(w => document.fonts.load(`${w} 16px Poppins`))).then(() => render()).catch(() => {});

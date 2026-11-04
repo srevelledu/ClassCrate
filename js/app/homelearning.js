@@ -30,6 +30,7 @@ function hlTaskCount(cls, t) {
 
 function renderHomeLearningTab() {
   const cls = activeClass(), tasks = cls.homework;
+  syncSaveStatus();
   if (document.activeElement !== $('#hlDue') && !$('#hlDue').value) $('#hlDue').value = addDays(isoDate(), 7);
   // tasks, newest due date first
   const order = tasks.slice().sort((a, b) => (b.due || '').localeCompare(a.due || '') || b.created - a.created);
@@ -101,6 +102,10 @@ function hlTaskMenu(anchor, id) {
 }
 
 function bindHomeLearning() {
+  $('#hlSave').addEventListener('click', () => {
+    if (saveNow()) toast('Home learning saved ✓ You can keep editing it.');
+    else toast('Could not save. This browser is blocking storage. Use ☰ Data → Export backup to keep a copy.');
+  });
   $('#hlAdd').addEventListener('submit', e => {
     e.preventDefault();
     const title = $('#hlTitle').value.trim();
